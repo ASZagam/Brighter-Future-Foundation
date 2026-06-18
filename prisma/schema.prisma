@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int         @id @default(autoincrement())
+  fullName      String
+  email         String         @unique
+  phone         String?
+  passwordHash  String
+  status        String         @default("active")
+  createdAt     DateTime       @default(now())
+  roles         UserRole[]
+  sessions      Session[]
+  passwordResets PasswordReset[]
+  member        Member?
+}
+
+model Role {
+  id             Int         @id @default(autoincrement())
+  name           String         @unique
+  description    String?
+  permissions    RolePermission[]
+  userRoles      UserRole[]
+}
+
+model Permission {
+  id              Int           @id @default(autoincrement())
+  name            String           @unique
+  description     String?
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           Int      @id @default(autoincrement())
+  role         Role        @relation(fields: [roleId], references: [id])
+  roleId       Int
+  permission   Permission  @relation(fields: [permissionId], references: [id])
+  permissionId Int
+
+  @@unique([roleId, permissionId])
+}
+
+model UserRole {
+  id      Int @id @default(autoincrement())
+  user    User   @relation(fields: [userId], references: [id])
+  userId  Int
+  role    Role   @relation(fields: [roleId], references: [id])
+  roleId  Int
+
+  @@unique([userId, roleId])
+}
+
+model Session {
+  id         Int   @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+model PasswordReset {
+  id         Int   @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  token      String   @unique
+  expiresAt  DateTime
+  used       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model Member {
+  id               Int             @id @default(autoincrement())
+  user             User?              @relation(fields: [userId], references: [id])
+  userId           Int?            @unique
+  membershipType   MembershipType?    @relation(fields: [membershipTypeId], references: [id])
+  membershipTypeId Int?
+  status           String             @default("active")
+  joinedAt         DateTime           @default(now())
+  payments         MembershipPayment[]
+  certificates     Certificate[]
+}
+
+model MembershipType {
+  id       Int  @id @default(autoincrement())
+  name     String
+  price    Float
+  durationMonths Int
+  members  Member[]
+}
+
+model MembershipPayment {
+  id          Int   @id @default(autoincrement())
+  member      Member   @relation(fields: [memberId], references: [id])
+  memberId    Int
+  amount      Float
+  paymentDate DateTime @default(now())
+  method      String
+  status      String   @default("completed")
+}
+
+model Certificate {
+  id        Int   @id @default(autoincrement())
+  member    Member   @relation(fields: [memberId], references: [id])
+  memberId  Int
+  title     String
+  issuedAt  DateTime @default(now())
+  fileUrl   String?
+}
+
+model Volunteer {
+  id          Int              @id @default(autoincrement())
+  fullName    String
+  email       String              @unique
+  phone       String?
+  skills      VolunteerSkill[]
+  assignments VolunteerAssignment[]
+  hours       VolunteerHour[]
+}
+
+model VolunteerSkill {
+  id          Int    @id @default(autoincrement())
+  volunteer   Volunteer @relation(fields: [volunteerId], references: [id])
+  volunteerId Int
+  skill       String
+}
+
+model VolunteerAssignment {
+  id          Int    @id @default(autoincrement())
+  volunteer   Volunteer @relation(fields: [volunteerId], references: [id])
+  volunteerId Int
+  event       Event?    @relation(fields: [eventId], references: [id])
+  eventId     Int?
+  role        String
+  assignedAt  DateTime  @default(now())
+}
+
+model VolunteerHour {
+  id          Int    @id @default(autoincrement())
+  volunteer   Volunteer @relation(fields: [volunteerId], references: [id])
+  volunteerId Int
+  date        DateTime
+  hours       Float
+  description String?
+}
+
+model Donor {
+  id        Int     @id @default(autoincrement())
+  name      String
+  email     String?
+  phone     String?
+  donations Donation[]
+}
+
+model Campaign {
+  id        Int     @id @default(autoincrement())
+  title     String
+  description String?
+  goal      Float
+  donations Donation[]
+}
+
+model Donation {
+  id              Int      @id @default(autoincrement())
+  donor           Donor       @relation(fields: [donorId], references: [id])
+  donorId         Int
+  campaign        Campaign?   @relation(fields: [campaignId], references: [id])
+  campaignId      Int?
+  amount          Float
+  paymentMethod   String
+  transaction     Transaction?
+  donatedAt       DateTime    @default(now())
+}
+
+model Transaction {
+  id                Int    @id @default(autoincrement())
+  donation          Donation  @relation(fields: [donationId], references: [id])
+  donationId        Int    @unique
+  provider          String
+  externalReference String?
+  status            String
+  processedAt       DateTime  @default(now())
+}
+
+model Event {
+  id            Int            @id @default(autoincrement())
+  title         String
+  description   String?
+  date          DateTime
+  location      String?
+  registrations EventRegistration[]
+  assignments   VolunteerAssignment[]
+}
+
+model EventRegistration {
+  id           Int   @id @default(autoincrement())
+  event        Event    @relation(fields: [eventId], references: [id])
+  eventId      Int
+  fullName     String
+  email        String
+  registeredAt DateTime @default(now())
+}
+
+model Post {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  categoryId  Int?
+  mediaFiles  MediaFile[]
+  publishedAt DateTime?
+}
+
+model Category {
+  id    Int @id @default(autoincrement())
+  name  String
+  posts Post[]
+}
+
+model MediaFile {
+  id     Int @id @default(autoincrement())
+  post   Post   @relation(fields: [postId], references: [id])
+  postId Int
+  url    String
+  type   String
+}

@@ -1,0 +1,34 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: bff_db
+      POSTGRES_USER: bff_user
+      POSTGRES_PASSWORD: bff_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+  web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["gunicorn", "bff.wsgi:application", "--bind", "0.0.0.0:8000"]
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SECRET_KEY=replace-this-with-secure-key
+      - DJANGO_DEBUG=False
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+      - DATABASE_NAME=bff_db
+      - DATABASE_USER=bff_user
+      - DATABASE_PASSWORD=bff_pass
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+    depends_on:
+      - db
+volumes:
+  postgres_data:
