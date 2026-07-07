@@ -7,6 +7,9 @@ from django.db import models
 from django.utils import timezone
 
 
+def generate_token():
+    return str(uuid.uuid4())
+
 class Role(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
     name = models.CharField(
@@ -95,7 +98,11 @@ class User(AbstractUser):
 
 class EmailVerificationToken(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
-    token = models.CharField(max_length=255, unique=True, default=lambda: str(uuid.uuid4()))
+    token = models.CharField(
+        max_length=255,
+        unique=True,
+        default=generate_token
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
     user = models.OneToOneField(
@@ -114,7 +121,11 @@ class EmailVerificationToken(models.Model):
 
 class PasswordResetToken(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
-    token = models.CharField(max_length=255, unique=True, default=lambda: str(uuid.uuid4()))
+    token = models.CharField(
+        max_length=255,
+        unique=True,
+        default=generate_token
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     is_used = models.BooleanField(default=False)
     user = models.ForeignKey(

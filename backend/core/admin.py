@@ -7,8 +7,25 @@ from .models import (
     Notification,
     ActivityLog,
     FileUpload,
+    OrganizationProfile,
+    Member,
+    Volunteer,
+    VolunteerHourLog,
+    Program
 )
 
+
+
+@admin.register(OrganizationProfile)
+class OrganizationProfileAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "name",
+        "founder_name",
+        "email",
+        "phone",
+        "is_active",
+    )
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
@@ -59,3 +76,88 @@ class FileUploadAdmin(admin.ModelAdmin):
     search_fields = ('title', 'description', 'user__username', 'organization__name')
     list_filter = ('upload_type', 'is_active', 'created_at')
     readonly_fields = ('content_type', 'size', 'created_at', 'updated_at')
+
+
+# core/admin.py
+
+@admin.register(Member)
+class MemberAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "member_id",
+        "full_name",
+        "membership_type",
+        "status",
+        "phone",
+    )
+
+    search_fields = (
+        "member_id",
+        "first_name",
+        "last_name",
+        "email",
+    )
+
+    list_filter = (
+        "membership_type",
+        "status",
+        "state",
+    )
+
+
+@admin.register(Volunteer)
+class VolunteerAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "volunteer_id",
+        "member",
+        "status",
+        "volunteer_hours",
+    )
+
+    search_fields = (
+        "volunteer_id",
+        "member__first_name",
+        "member__last_name",
+    )
+
+    list_filter = (
+        "status",
+    )
+
+
+@admin.register(VolunteerHourLog)
+class VolunteerHourLogAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "volunteer",
+        "hours",
+        "activity",
+        "activity_date",
+    )
+
+
+@admin.register(Program)
+class ProgramAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "program_id",
+        "title",
+        "status",
+        "start_date",
+        "budget",
+    )
+
+    search_fields = (
+        "title",
+        "program_id",
+    )
+
+    list_filter = (
+        "status",
+        "is_featured",
+    )
+
+    prepopulated_fields = {
+        "slug": ("title",)
+    }

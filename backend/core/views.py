@@ -1,9 +1,10 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, generics
+
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from .models import Organization, Settings, Country, State, Notification, ActivityLog, FileUpload
+from .models import Organization, Settings, Country, State, Notification, ActivityLog, FileUpload, Member, Volunteer, VolunteerHourLog, Program
 from .serializers import (
     OrganizationSerializer,
     SettingsSerializer,
@@ -12,8 +13,148 @@ from .serializers import (
     NotificationSerializer,
     ActivityLogSerializer,
     FileUploadSerializer,
+    OrganizationProfileSerializer,
+    MemberSerializer,
+    VolunteerSerializer,
+    VolunteerHourLogSerializer,
+    ProgramSerializer
+
 )
 from .services import get_dashboard_statistics
+from .permissions import IsOrganizationAdmin
+from .models import OrganizationProfile
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+
+
+
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+
+
+
+
+
+
+
+
+
+
+class ProgramViewSet(viewsets.ModelViewSet):
+
+    queryset = Program.objects.all()
+
+    serializer_class = ProgramSerializer
+
+    filterset_fields = [
+        "status",
+        "is_featured",
+    ]
+
+    search_fields = [
+        "title",
+        "description",
+        "location",
+    ]
+
+    ordering_fields = [
+        "created_at",
+        "start_date",
+        "budget",
+    ]
+
+
+    
+
+class MemberViewSet(viewsets.ModelViewSet):
+
+    queryset = Member.objects.all()
+    serializer_class = MemberSerializer
+    permission_classes = [IsAuthenticated]
+
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+
+    search_fields = [
+        "member_id",
+        "first_name",
+        "last_name",
+        "email",
+        "phone",
+    ]
+
+    filterset_fields = [
+        "membership_type",
+        "status",
+        "state",
+    ]
+
+    ordering_fields = [
+        "created_at",
+        "joined_at",
+        "first_name",
+    ]
+
+
+
+class VolunteerViewSet(viewsets.ModelViewSet):
+
+    queryset = Volunteer.objects.select_related(
+        "member"
+    )
+
+    serializer_class = VolunteerSerializer
+
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+
+    search_fields = [
+        "volunteer_id",
+        "member__first_name",
+        "member__last_name",
+        "member__email",
+    ]
+
+    filterset_fields = [
+        "status",
+    ]
+
+    ordering_fields = [
+        "created_at",
+        "volunteer_hours",
+    ]
+
+    filter_backends = [
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+
+
+class VolunteerHourLogViewSet(
+    viewsets.ModelViewSet
+):
+
+    queryset = VolunteerHourLog.objects.select_related(
+        "volunteer",
+        "volunteer__member",
+    )
+
+    serializer_class = VolunteerHourLogSerializer
+
+    permission_classes = [
+        permissions.IsAuthenticated
+    ]
+
+
+
+
+
+
+
 
 
 class OrganizationViewSet(viewsets.ModelViewSet):
@@ -21,6 +162,20 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     serializer_class = OrganizationSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+
+# core/views.py
+class OrganizationProfileView(
+    generics.RetrieveUpdateAPIView
+):
+
+    serializer_class = OrganizationProfileSerializer
+    permission_classes = [IsOrganizationAdmin]
+
+    def get_object(self):
+        obj, _ = OrganizationProfile.objects.get_or_create(
+            name="Brighter Future Foundation"
+        )
+        return obj
 
 class SettingsViewSet(viewsets.ModelViewSet):
     queryset = Settings.objects.select_related('organization').all()

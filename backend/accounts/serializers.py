@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
-
+import uuid
 User = get_user_model()
-
+from .utils import generate_username
+from .models import User, Role, UserRole
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,42 +42,108 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.is_super_admin
 
 
-class RegisterSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=150)
+import uuid
+
+class RegisterSerializer(serializers.ModelSerializer):
+
     email = serializers.EmailField()
-    full_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
+    first_name = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
+
+    last_name = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
+
+    full_name = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
+
+    phone = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
+
     password = serializers.CharField(write_only=True)
-    password2 = serializers.CharField(write_only=True, required=False)
 
-    def validate(self, data):
-        if data['password'] != data.get('password2', data['password']):
-            raise serializers.ValidationError({'password': 'Passwords do not match.'})
+    password2 = serializers.CharField(write_only=True)
 
-        if User.objects.filter(username=data['username']).exists():
-            raise serializers.ValidationError({'username': 'A user with that username already exists.'})
+    class Meta:
+        model = User
 
-        if User.objects.filter(email=data['email']).exists():
-            raise serializers.ValidationError({'email': 'A user with that email already exists.'})
+        fields = (
+            "email",
+            "first_name",
+            "last_name",
+            "full_name",
+            "phone",
+            "password",
+            "password2",
+        )
 
-        return data
+    def validate(self, attrs):
+
+        if attrs["password"] != attrs["password2"]:
+            raise serializers.ValidationError(
+                {"password": "Passwords do not match."}
+            )
+
+        if User.objects.filter(email=attrs["email"]).exists():
+            raise serializers.ValidationError(
+                {"email": "A user with this email already exists."}
+            )
+
+        return attrs
+
+        
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
-        validated_data.pop('password2', None)
-        user = User.objects.create_user(
-            password=password,
-            **{
-                'username': validated_data['username'],
-                'email': validated_data['email'],
-                'full_name': validated_data.get('full_name', ''),
-                'phone': validated_data.get('phone', ''),
-                'status': 'inactive',
-            }
-        )
-        user.email_verified = False
-        user.save(update_fields=['email_verified', 'status'])
-        return user
+            validated_data.pop("password2")
+            password = validated_data.pop("password")
+
+            first_name = validated_data.get("first_name", "").strip()
+            last_name = validated_data.get("last_name", "").strip()
+
+            username = generate_username(
+                first_name=first_name,
+                last_name=last_name,
+                email=validated_data["email"],
+            )
+
+            full_name = validated_data.get("full_name", "").strip()
+
+            if not full_name:
+                full_name = " ".join(filter(None, [first_name, last_name]))
+
+            validated_data["full_name"] = full_name
+
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                **validated_data,
+            )
+
+            # -----------------------------------------
+            # Automatically assign the Member role
+            # -----------------------------------------
+            member_role, _ = Role.objects.get_or_create(
+                name="member",
+                defaults={
+                    "description": "Default role assigned to newly registered users."
+                }
+            )
+
+            UserRole.objects.get_or_create(
+                user=user,
+                role=member_role,
+            )
+
+            return user
 
 
 class ChangePasswordSerializer(serializers.Serializer):

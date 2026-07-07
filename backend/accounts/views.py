@@ -20,22 +20,49 @@ from .serializers import (
     UserSerializer,
     VerifyEmailSerializer,
 )
+from .services import AuditService
+
+from django.contrib.auth import authenticate
+from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import AuthenticationFailed
 
 
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+class CustomTokenObtainPairSerializer(serializers.Serializer):
+
+    email = serializers.EmailField()
+
+    password = serializers.CharField(write_only=True)
+
     def validate(self, attrs):
-        data = super().validate(attrs)
-        user = self.user
+
+        user = authenticate(
+            email=attrs["email"],
+            password=attrs["password"],
+        )
+
+        if not user:
+            raise AuthenticationFailed("Invalid email or password.")
 
         if not user.email_verified:
-            raise AuthenticationFailed('Email address has not been verified.')
+            raise AuthenticationFailed("Email address has not been verified.")
 
-        if user.status != 'active':
-            raise AuthenticationFailed('Account is not active.')
+        if user.status != "active":
+            raise AuthenticationFailed("Account is not active.")
 
-        data['user'] = UserSerializer(user).data
-        return data
+        refresh = RefreshToken.for_user(user)
 
+        AuditService.log(
+            user=user,
+            action="login",
+            request=self.context.get("request"),
+        )
+
+        return {
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "user": UserSerializer(user).data,
+        }
 
 class AuthLoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -96,6 +123,11 @@ class ResetPasswordView(APIView):
         user.set_password(new_password)
         user.last_password_change = timezone.now()
         user.save(update_fields=['password', 'last_password_change'])
+        AuditService.log(
+            user=user,
+            action="password_reset",
+            request=request,
+        )
 
         reset_token.is_used = True
         reset_token.save(update_fields=['is_used'])
@@ -121,6 +153,11 @@ class VerifyEmailView(APIView):
         user.email_verified_at = timezone.now()
         user.status = 'active'
         user.save(update_fields=['email_verified', 'email_verified_at', 'status'])
+        AuditService.log(
+            user=user,
+            action="email_verified",
+            request=request,
+        )
 
         email_token.is_used = True
         email_token.save(update_fields=['is_used'])
@@ -149,4 +186,26 @@ class ChangePasswordView(APIView):
         user.last_password_change = timezone.now()
         user.save(update_fields=['password', 'last_password_change'])
 
+        AuditService.log(
+            user=user,
+            action="password_change",
+            request=request,
+        )
+
         return Response({'detail': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+
+class LogoutView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        AuditService.log(
+            user=request.user,
+            action="logout",
+            request=request,
+        )
+
+        return Response({
+            "detail": "Logged out successfully."
+        })

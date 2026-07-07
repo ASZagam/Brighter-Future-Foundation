@@ -8,7 +8,84 @@ from .models import (
     Notification,
     ActivityLog,
     FileUpload,
+    Member,
+    Volunteer,
+    VolunteerHourLog,
+    Program
 )
+
+
+# core/serializers.py
+class ProgramSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Program
+        fields = "__all__"
+
+class VolunteerSerializer(serializers.ModelSerializer):
+
+    member_name = serializers.CharField(
+        source="member.full_name",
+        read_only=True
+    )
+
+    member_email = serializers.CharField(
+        source="member.email",
+        read_only=True
+    )
+
+    class Meta:
+        model = Volunteer
+
+        fields = "__all__"
+
+        read_only_fields = [
+            "id",
+            "volunteer_id",
+            "volunteer_hours",
+            "created_at",
+            "updated_at",
+        ]
+
+
+ # Hours Serializer       
+class VolunteerHourLogSerializer(
+    serializers.ModelSerializer
+):
+
+    volunteer_name = serializers.CharField(
+        source="volunteer.member.full_name",
+        read_only=True
+    )
+
+    class Meta:
+        model = VolunteerHourLog
+
+        fields = "__all__"
+
+        read_only_fields = [
+            "id",
+            "created_at",
+        ]
+
+
+class MemberSerializer(serializers.ModelSerializer):
+
+    full_name = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Member
+        fields = "__all__"
+
+        read_only_fields = [
+            "id",
+            "member_id",
+            "joined_at",
+            "created_at",
+            "updated_at",
+        ]
+
+
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -41,7 +118,22 @@ class StateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'country_name']
 
+# core/serializers.py
 
+from rest_framework import serializers
+from .models import OrganizationProfile
+
+
+class OrganizationProfileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = OrganizationProfile
+        fields = "__all__"
+
+
+
+
+        
 class OrganizationSerializer(serializers.ModelSerializer):
     logo_url = serializers.SerializerMethodField()
     country_name = serializers.CharField(source='country.name', read_only=True)
