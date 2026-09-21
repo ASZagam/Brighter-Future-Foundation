@@ -4,7 +4,7 @@ from rest_framework import serializers
 import uuid
 User = get_user_model()
 from .utils import generate_username
-from .models import User, Role, UserRole
+from .models import User, Role, UserRole, Roles
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -132,7 +132,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             # Automatically assign the Member role
             # -----------------------------------------
             member_role, _ = Role.objects.get_or_create(
-                name="member",
+                name=Roles.MEMBER,
                 defaults={
                     "description": "Default role assigned to newly registered users."
                 }

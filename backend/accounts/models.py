@@ -10,18 +10,28 @@ from django.utils import timezone
 def generate_token():
     return str(uuid.uuid4())
 
+
+class Roles:
+    SUPER_ADMIN = "super_admin"
+    ADMIN = "admin"
+    COORDINATOR = "coordinator"
+    VOLUNTEER = "volunteer"
+    MEMBER = "member"
+    DONOR = "donor"
+
+
 class Role(models.Model):
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
     name = models.CharField(
         max_length=120,
         unique=True,
         choices=[
-            ("super_admin", "Super Admin"),
-            ("admin", "Administrator"),
-            ("coordinator", "Coordinator"),
-            ("volunteer", "Volunteer"),
-            ("donor", "Donor"),
-            ("member", "Member"),
+            (Roles.SUPER_ADMIN, "Super Admin"),
+            (Roles.ADMIN, "Administrator"),
+            (Roles.COORDINATOR, "Coordinator"),
+            (Roles.VOLUNTEER, "Volunteer"),
+            (Roles.DONOR, "Donor"),
+            (Roles.MEMBER, "Member"),
         ],
     )
     description = models.TextField(blank=True)
@@ -36,7 +46,7 @@ class Role(models.Model):
         ordering = ["name"]
 
     def __str__(self):
-        return self.name
+        return self.get_name_display() or self.name
 
 
 class User(AbstractUser):
@@ -88,11 +98,44 @@ class User(AbstractUser):
         self.failed_login_attempts = 0
         self.save(update_fields=["failed_login_attempts"])
 
+    def has_role(self, role_name: str) -> bool:
+        if not role_name:
+            return False
+        return self.roles.filter(name__iexact=role_name).exists()
+
+    def has_any_role(self, *role_names: str) -> bool:
+        if self.is_superuser:
+            return True
+
+        normalized_roles = [role_name.lower() for role_name in role_names if role_name]
+        if not normalized_roles:
+            return False
+
+        return any(self.has_role(role_name) for role_name in normalized_roles)
+
     @property
-    def is_super_admin(self):
-        return self.is_superuser or self.roles.filter(name__iexact="super_admin").exists()
+    def is_super_admin(self) -> bool:
+        return self.is_superuser or self.has_any_role(Roles.SUPER_ADMIN)
+
+    @property
+    def is_admin(self) -> bool:
+        return self.has_any_role(Roles.ADMIN)
+
+    @property
+    def is_coordinator(self) -> bool:
+        return self.has_any_role(Roles.COORDINATOR)
+
+    @property
+    def is_volunteer(self) -> bool:
+        return self.has_any_role(Roles.VOLUNTEER)
+
+    @property
+    def is_member(self) -> bool:
+        return self.has_any_role(Roles.MEMBER)
 
     def __str__(self):
+        if self.full_name and self.email:
+            return f"{self.full_name} ({self.email})"
         return self.full_name or self.username or self.email
 
 

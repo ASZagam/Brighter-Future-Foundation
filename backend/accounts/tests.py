@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Role, UserRole, EmailVerificationToken, PasswordResetToken, AuditLog
+from .models import Role, UserRole, EmailVerificationToken, PasswordResetToken, AuditLog, Roles
 
 User = get_user_model()
 
@@ -54,6 +54,22 @@ class UserModelTestCase(TestCase):
 
         user.lock_account(minutes=30)
         self.assertTrue(user.is_locked)
+
+    def test_user_role_properties(self):
+        """Test role helper properties on the user model"""
+        user = User.objects.create_user(**self.user_data)
+        self.assertFalse(user.is_admin)
+        self.assertFalse(user.is_coordinator)
+        self.assertFalse(user.is_volunteer)
+        self.assertFalse(user.is_member)
+
+        role = Role.objects.create(name=Roles.ADMIN, description='Administrator role')
+        UserRole.objects.create(user=user, role=role)
+
+        self.assertTrue(user.is_admin)
+        self.assertFalse(user.is_coordinator)
+        self.assertFalse(user.is_volunteer)
+        self.assertFalse(user.is_member)
 
     def test_user_failed_login_attempts(self):
         """Test failed login attempts tracking"""

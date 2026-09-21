@@ -26,20 +26,26 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import AuthenticationFailed
+from drf_spectacular.utils import extend_schema
 
 
 class CustomTokenObtainPairSerializer(serializers.Serializer):
 
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False)
+    username = serializers.CharField(required=False)
 
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
+        email = attrs.get("email")
+        username = attrs.get("username")
+        if not email and not username:
+            raise serializers.ValidationError({"email": "Email or username is required."})
 
         user = authenticate(
             email=attrs["email"],
             password=attrs["password"],
-        )
+        ) if email else authenticate(username=username, password=attrs["password"])
 
         if not user:
             raise AuthenticationFailed("Invalid email or password.")
@@ -71,6 +77,7 @@ class AuthLoginView(TokenObtainPairView):
 class RegisterView(APIView):
     permission_classes = []
 
+    @extend_schema(request=RegisterSerializer, responses={201: UserSerializer})
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

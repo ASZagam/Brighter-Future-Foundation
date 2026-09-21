@@ -1,17 +1,23 @@
 from django.contrib import admin
 from .models import (
-    Organization,
-    Settings,
-    Country,
-    State,
-    Notification,
     ActivityLog,
+    Country,
     FileUpload,
-    OrganizationProfile,
     Member,
+    Notification,
+    Organization,
+    OrganizationProfile,
+    Program,
+    ProgramBeneficiary,
+    ProgramCategory,
+    ProgramDocument,
+    ProgramGallery,
+    ProgramReport,
+    ProgramVolunteerAssignment,
+    Settings,
+    State,
     Volunteer,
     VolunteerHourLog,
-    Program
 )
 
 
@@ -137,27 +143,83 @@ class VolunteerHourLogAdmin(admin.ModelAdmin):
     )
 
 
+class ProgramBeneficiaryInline(admin.TabularInline):
+    model = ProgramBeneficiary
+    extra = 1
+
+
+class ProgramDocumentInline(admin.TabularInline):
+    model = ProgramDocument
+    extra = 1
+
+
+class ProgramGalleryInline(admin.TabularInline):
+    model = ProgramGallery
+    extra = 1
+
+
+class ProgramReportInline(admin.TabularInline):
+    model = ProgramReport
+    extra = 1
+
+
+@admin.register(ProgramCategory)
+class ProgramCategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active", "color", "icon")
+    search_fields = ("name", "description")
+    list_filter = ("is_active",)
+
+
 @admin.register(Program)
 class ProgramAdmin(admin.ModelAdmin):
+    list_display = ("program_id", "title", "status", "priority", "budget", "amount_spent", "remaining_budget", "beneficiary_count")
+    search_fields = ("program_id", "title", "slug", "description", "lga")
+    list_filter = ("status", "priority", "category", "country", "state", "manager", "coordinator")
+    prepopulated_fields = {"slug": ("title",)}
+    inlines = [ProgramBeneficiaryInline, ProgramDocumentInline, ProgramGalleryInline, ProgramReportInline]
+    readonly_fields = ("program_id", "remaining_budget", "percentage_budget_used")
 
-    list_display = (
-        "program_id",
-        "title",
-        "status",
-        "start_date",
-        "budget",
-    )
+    def remaining_budget(self, obj):
+        return obj.remaining_budget
 
-    search_fields = (
-        "title",
-        "program_id",
-    )
+    remaining_budget.short_description = "Remaining Budget"
 
-    list_filter = (
-        "status",
-        "is_featured",
-    )
+    def percentage_budget_used(self, obj):
+        return f"{obj.percentage_budget_used}%"
 
-    prepopulated_fields = {
-        "slug": ("title",)
-    }
+    percentage_budget_used.short_description = "Budget Used"
+
+
+@admin.register(ProgramBeneficiary)
+class ProgramBeneficiaryAdmin(admin.ModelAdmin):
+    list_display = ("program", "full_name", "gender", "phone", "state", "lga")
+    search_fields = ("full_name", "phone", "state", "lga", "community")
+    list_filter = ("state", "gender")
+
+
+@admin.register(ProgramDocument)
+class ProgramDocumentAdmin(admin.ModelAdmin):
+    list_display = ("title", "program", "document_type", "uploaded_by", "uploaded_at")
+    search_fields = ("title", "program__title")
+    list_filter = ("document_type", "uploaded_at")
+
+
+@admin.register(ProgramGallery)
+class ProgramGalleryAdmin(admin.ModelAdmin):
+    list_display = ("program", "caption", "published", "uploaded_by", "uploaded_at")
+    search_fields = ("caption", "program__title")
+    list_filter = ("published", "uploaded_at")
+
+
+@admin.register(ProgramReport)
+class ProgramReportAdmin(admin.ModelAdmin):
+    list_display = ("title", "program", "submitted_by", "submitted_at")
+    search_fields = ("title", "summary", "program__title")
+    list_filter = ("submitted_at",)
+
+
+@admin.register(ProgramVolunteerAssignment)
+class ProgramVolunteerAssignmentAdmin(admin.ModelAdmin):
+    list_display = ("program", "volunteer", "assigned_by", "assigned_at", "is_active")
+    search_fields = ("program__title", "volunteer__member__first_name", "volunteer__member__last_name")
+    list_filter = ("is_active", "assigned_at")

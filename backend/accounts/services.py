@@ -5,7 +5,10 @@ class AuditService:
 
     @staticmethod
     def log(user, action, request=None, details=None):
-        AuditLog.objects.create(
+        if not user:
+            return None
+
+        return AuditLog.objects.create(
             user=user,
             action=action,
             ip_address=(
