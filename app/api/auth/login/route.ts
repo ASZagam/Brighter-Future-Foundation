@@ -22,7 +22,10 @@ export async function POST(request: Request) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username: loginIdentifier, password }),
+        body: JSON.stringify({
+          ...(username ? { username } : { email }),
+          password,
+        }),
       });
     } catch (fetchError) {
       console.error('Login fetch failed:', fetchError);

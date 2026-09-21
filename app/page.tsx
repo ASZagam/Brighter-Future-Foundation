@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import PublicShowcase from './components/PublicShowcase';
 
 const cards = [
   {
@@ -53,6 +54,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <PublicShowcase />
     </div>
   );
 }

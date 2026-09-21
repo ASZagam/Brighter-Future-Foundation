@@ -1,182 +1,297 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { apiGet } from '../../lib/api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import OpsShell from '../components/OpsShell';
+import { apiCall, apiDelete, apiGet } from '../../lib/api';
 
 interface UploadRecord {
   id: number;
+  user: number | null;
+  uploaded_by: string;
   title: string;
   description: string;
-  upload_type: string;
   file_url: string;
+  upload_type: string;
   content_type: string;
   size: number;
   is_active: boolean;
   created_at: string;
 }
 
+interface UploadStats {
+  kpis: { total: number; images: number; documents: number; total_size_bytes: number };
+}
+
+const PAGE_SIZE = 20;
+
+function formatBytes(bytes: number): string {
+  if (!bytes) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, index);
+  return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
+function fmtDate(value: string): string {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 export default function FileUploadsPage() {
   const [uploads, setUploads] = useState<UploadRecord[]>([]);
-  const [error, setError] = useState('');
+  const [stats, setStats] = useState<UploadStats | null>(null);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [uploadType, setUploadType] = useState('');
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [uploadType, setUploadType] = useState('document');
+  const [type, setType] = useState('document');
   const [file, setFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    async function loadUploads() {
-      try {
-        const data = await apiGet<UploadRecord[]>('/core/file-uploads/');
-        setUploads(data);
-      } catch (err: any) {
-        setError(err.message || 'Unable to load file uploads.');
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadUploads();
-  }, []);
+  const query = useMemo(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (uploadType) params.set('upload_type', uploadType);
+    params.set('ordering', '-created_at');
+    params.set('page', String(page));
+    return params.toString();
+  }, [search, uploadType, page]);
 
-  async function submitUpload(event: React.FormEvent) {
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [list, stat] = await Promise.all([
+        apiGet<{ results: UploadRecord[]; count: number }>(`/core/file-uploads/?${query}`),
+        apiGet<UploadStats>('/core/file-uploads/stats/'),
+      ]);
+      setUploads(list.results ?? []);
+      setCount(list.count ?? 0);
+      setStats(stat);
+      setError('');
+    } catch (err: any) {
+      setError(err.message || 'Unable to load file uploads.');
+    } finally {
+      setLoading(false);
+    }
+  }, [query]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, uploadType]);
+
+  const totalPages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+  const kpis = stats?.kpis;
+
+  function openForm() {
+    setTitle('');
+    setDescription('');
+    setType('document');
+    setFile(null);
+    setShowForm(true);
+    setError('');
+    setNotice('');
+  }
+
+  async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!file) {
       setError('Please choose a file before uploading.');
       return;
     }
-
-    setUploading(true);
+    setBusy(true);
     setError('');
-
     try {
       const formData = new FormData();
       formData.append('title', title || file.name);
       formData.append('description', description);
-      formData.append('upload_type', uploadType);
+      formData.append('upload_type', type);
       formData.append('file', file);
-
-      const response = await fetch('/api/core/file-uploads/', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || 'Upload failed.');
-      }
-
-      const newRecord = await response.json();
-      setUploads((current) => [newRecord, ...current]);
-      setTitle('');
-      setDescription('');
-      setFile(null);
+      await apiCall<UploadRecord>('/core/file-uploads/', { method: 'POST', body: formData });
+      setShowForm(false);
+      setNotice('File uploaded to the vault.');
+      await load();
     } catch (err: any) {
       setError(err.message || 'Unable to complete file upload.');
     } finally {
-      setUploading(false);
+      setBusy(false);
+    }
+  }
+
+  async function remove(upload: UploadRecord) {
+    if (!window.confirm(`Delete "${upload.title || 'Untitled file'}"?`)) return;
+    setBusy(true);
+    try {
+      await apiDelete(`/core/file-uploads/${upload.id}/`);
+      setNotice('File removed.');
+      await load();
+    } catch (err: any) {
+      setError(err.message || 'Unable to delete file.');
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
-    <div className='page-shell' style={{ padding: '3rem 0' }}>
-      <div className='section-title'>
-        <div>
-          <p className='eyebrow'>File Upload System</p>
-          <h1>Upload images and documents securely</h1>
+    <OpsShell>
+      <main className="ops-page">
+        <div className="ops-kicker">
+          <span>ASSET LIBRARY</span>
+          <i>|</i>
+          <span className="dim">Documents, images &amp; organisation media</span>
         </div>
-        <Link href='/core' className='button-link'>Return to Core</Link>
-      </div>
 
-      <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 }}>
-        <p className='text-muted'>Add documents or image assets for your organization. Supported formats include PDF, DOCX, XLSX, PNG, JPG and more.</p>
-      </div>
+        <div className="ops-head">
+          <div>
+            <h1>File Vault</h1>
+            <p>Upload and manage the documents and images attached to programmes, reports and the public site.</p>
+          </div>
+          <div className="ops-head-actions">
+            <button type="button" onClick={load} disabled={loading || busy}>{loading ? 'Loading…' : '↻ Refresh'}</button>
+            <button type="button" className="primary" onClick={openForm}>+ Upload File</button>
+          </div>
+        </div>
 
-      <div className='form-panel' style={{ marginBottom: 32 }}>
-        <form onSubmit={submitUpload}>
-          <div className='form-grid' style={{ display: 'grid', gap: 16 }}>
-            <div className='form-field'>
-              <label className='field-label'>Title</label>
-              <input
-                type='text'
-                className='field-input'
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder='Enter title or leave blank to use file name'
-              />
-            </div>
-            <div className='form-field'>
-              <label className='field-label'>Description</label>
-              <textarea
-                className='field-textarea'
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder='Optional description for the uploaded file'
-              />
-            </div>
-            <div className='form-field'>
-              <label className='field-label'>Upload type</label>
-              <select className='field-select' value={uploadType} onChange={(event) => setUploadType(event.target.value)}>
-                <option value='document'>Document</option>
-                <option value='image'>Image</option>
+        {error ? <div className="ops-notice warn">API issue — {error}</div> : notice ? <div className="ops-notice">{notice}</div> : null}
+
+        <div className="ops-kpis">
+          <div className="ops-kpi accent">
+            <span className="ops-kpi-label">Total files</span>
+            <strong className="ops-kpi-value">{kpis?.total ?? '…'}</strong>
+            <span className="ops-kpi-foot">in the vault</span>
+          </div>
+          <div className="ops-kpi">
+            <span className="ops-kpi-label">Documents</span>
+            <strong className="ops-kpi-value">{kpis?.documents ?? '…'}</strong>
+            <span className="ops-kpi-foot">PDF, DOCX, XLSX</span>
+          </div>
+          <div className="ops-kpi">
+            <span className="ops-kpi-label">Images</span>
+            <strong className="ops-kpi-value">{kpis?.images ?? '…'}</strong>
+            <span className="ops-kpi-foot">PNG, JPG</span>
+          </div>
+          <div className="ops-kpi">
+            <span className="ops-kpi-label">Storage used</span>
+            <strong className="ops-kpi-value">{kpis ? formatBytes(kpis.total_size_bytes) : '…'}</strong>
+            <span className="ops-kpi-foot">combined size</span>
+          </div>
+          <div className="ops-kpi">
+            <span className="ops-kpi-label">Showing</span>
+            <strong className="ops-kpi-value">{count}</strong>
+            <span className="ops-kpi-foot">matching assets</span>
+          </div>
+        </div>
+
+        <section className="ops-panel">
+          <div className="ops-toolbar">
+            <strong>Asset library</strong>
+            <div className="ops-toolbar-group">
+              <input className="ops-input ops-search" placeholder="Search title, description…" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <select className="ops-select" value={uploadType} onChange={(e) => setUploadType(e.target.value)}>
+                <option value="">All types</option>
+                <option value="document">Documents</option>
+                <option value="image">Images</option>
               </select>
             </div>
-            <div className='form-field'>
-              <label className='field-label'>Choose file</label>
-              <input
-                type='file'
-                className='field-input'
-                onChange={(event) => setFile(event.target.files ? event.target.files[0] : null)}
-              />
+          </div>
+
+          <div className="ops-table-wrap">
+            <table className="ops-table">
+              <thead>
+                <tr><th>Asset</th><th>Type</th><th className="num">Size</th><th>Uploaded by</th><th>Date</th><th aria-label="Actions" /></tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={6} className="ops-empty-row">Loading uploads…</td></tr>
+                ) : uploads.length === 0 ? (
+                  <tr><td colSpan={6} className="ops-empty-row">No files match the current filters.</td></tr>
+                ) : (
+                  uploads.map((upload) => (
+                    <tr key={upload.id}>
+                      <td>
+                        <span className="strong">{upload.title || 'Untitled file'}</span>
+                        {upload.description ? <><br /><span style={{ color: '#8993a0', fontSize: 11 }}>{upload.description}</span></> : null}
+                      </td>
+                      <td><span className={`ops-chip ${upload.upload_type === 'image' ? 'blue' : 'grey'}`}>{upload.upload_type || 'file'}</span></td>
+                      <td className="num">{formatBytes(upload.size)}</td>
+                      <td>{upload.uploaded_by || '—'}</td>
+                      <td>{fmtDate(upload.created_at)}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <a className="ops-btn sm" href={upload.file_url} target="_blank" rel="noreferrer">Open</a>{' '}
+                        <button type="button" className="ops-btn sm danger" disabled={busy} onClick={() => remove(upload)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="ops-pager">
+            <span>{count} file{count === 1 ? '' : 's'} · page {page} of {totalPages}</span>
+            <div className="ops-pager-controls">
+              <button type="button" className="ops-btn sm" disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}>‹ Prev</button>
+              <button type="button" className="ops-btn sm" disabled={page >= totalPages || loading} onClick={() => setPage((p) => p + 1)}>Next ›</button>
             </div>
           </div>
+        </section>
 
-          {error ? <p style={{ marginTop: 16, color: '#b91c1c' }}>{error}</p> : null}
-          <button type='submit' className='button-link' style={{ marginTop: 20, opacity: uploading ? 0.7 : 1 }} disabled={uploading}>
-            {uploading ? 'Uploading…' : 'Upload file'}
-          </button>
-        </form>
-      </div>
-
-      <div>
-        <div className='section-title' style={{ marginBottom: 18 }}>
-          <div>
-            <p className='eyebrow'>Recent Uploads</p>
-            <h2 style={{ margin: 0 }}>Latest assets</h2>
-          </div>
+        <div className="ops-status-strip">
+          <span className="go">● Vault live</span>
+          <span>POST multipart to <b>/api/core/file-uploads/</b> · totals from <b>/file-uploads/stats/</b></span>
+          <span className="nl">PDF · DOCX · XLSX · PNG · JPG</span>
         </div>
+      </main>
 
-        {loading ? (
-          <p>Loading uploads…</p>
-        ) : uploads.length === 0 ? (
-          <div className='card'>
-            <p style={{ margin: 0, color: '#475569' }}>No uploads yet. Submit a file to get started.</p>
-          </div>
-        ) : (
-          <div className='card-grid'>
-            {uploads.map((upload) => (
-              <div key={upload.id} className='card'>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start' }}>
-                  <div>
-                    <p className='eyebrow'>{upload.upload_type === 'image' ? 'Image' : 'Document'}</p>
-                    <h3 style={{ margin: '0.8rem 0 0' }}>{upload.title || 'Untitled file'}</h3>
-                  </div>
-                  <span className='action-button' style={{ minHeight: 'auto', padding: '10px 14px' }}>{upload.is_active ? 'Active' : 'Disabled'}</span>
-                </div>
-                <p style={{ margin: '16px 0 0', color: '#475569' }}>{upload.description || 'No description provided.'}</p>
-                <div style={{ marginTop: 18, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <a href={upload.file_url} target='_blank' rel='noreferrer' className='button-link' style={{ background: '#0f172a' }}>
-                    Open file
-                  </a>
-                  <p style={{ margin: 0, color: '#64748b' }}>{(upload.size / 1024).toFixed(1)} KB</p>
+      {showForm ? (
+        <div className="ops-modal-backdrop" onClick={() => !busy && setShowForm(false)}>
+          <div className="ops-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="ops-modal-head">
+              <h2>Upload File</h2>
+              <button type="button" className="ops-modal-close" onClick={() => setShowForm(false)} aria-label="Close">×</button>
+            </div>
+            <form onSubmit={submit}>
+              <div className="ops-modal-body">
+                <div className="ops-form-grid">
+                  <label className="ops-field full">
+                    <span>Title</span>
+                    <input className="ops-input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Leave blank to use the file name" />
+                  </label>
+                  <label className="ops-field">
+                    <span>Upload type</span>
+                    <select className="ops-select" value={type} onChange={(e) => setType(e.target.value)}>
+                      <option value="document">Document</option>
+                      <option value="image">Image</option>
+                    </select>
+                  </label>
+                  <label className="ops-field">
+                    <span>File *</span>
+                    <input type="file" className="ops-input" onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} />
+                  </label>
+                  <label className="ops-field full">
+                    <span>Description</span>
+                    <textarea className="ops-textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional description for the uploaded file" />
+                  </label>
                 </div>
               </div>
-            ))}
+              <div className="ops-modal-foot">
+                <button type="button" className="ops-btn" onClick={() => setShowForm(false)} disabled={busy}>Cancel</button>
+                <button type="submit" className="ops-btn primary" disabled={busy}>{busy ? 'Uploading…' : 'Upload file'}</button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      ) : null}
+    </OpsShell>
   );
 }

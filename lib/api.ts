@@ -45,14 +45,15 @@ export async function apiCall<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `/api${endpoint}`;
+  const url = `/api/backend${endpoint}`;
+  const headers = new Headers(options.headers);
+  if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
   
   const response = await fetchWithAuth(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -60,7 +61,12 @@ export async function apiCall<T = any>(
     throw new Error(error.error || `API call failed: ${response.status}`);
   }
 
-  return response.json();
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 /**

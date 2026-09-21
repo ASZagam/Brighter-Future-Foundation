@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiGet, apiPost } from '../../lib/api';
+import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from '../components/ui';
 
 interface NotificationRecord {
   id: number;
@@ -23,8 +24,8 @@ export default function NotificationsPage() {
   useEffect(() => {
     async function loadNotifications() {
       try {
-        const data = await apiGet<NotificationRecord[]>('/core/notifications/');
-        setNotifications(data);
+        const data = await apiGet<{ results: NotificationRecord[]; count: number }>('/core/notifications/');
+        setNotifications(data.results ?? []);
       } catch (err: any) {
         setError(err.message || 'Unable to load notifications.');
       } finally {
@@ -59,36 +60,28 @@ export default function NotificationsPage() {
 
   return (
     <div className='page-shell' style={{ padding: '3rem 0' }}>
-      <div className='section-title'>
-        <div>
-          <p className='eyebrow'>Notification Center</p>
-          <h1>Manage alerts and platform messages</h1>
-        </div>
-        <Link href='/core' className='button-link'>Return to Core</Link>
-      </div>
+      <PageHeader eyebrow='Notification Center' title='Manage alerts and platform messages' description='Review unread messages and keep your team informed.' action={<Link href='/core' className='secondary-button compact-button'>Return to Core</Link>} />
 
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <p className='text-muted'>Review unread messages and keep your team informed with a single action.</p>
+        <p className='text-muted'>Your latest system messages.</p>
         <button type='button' className='button-link' onClick={markAllRead} disabled={loading || markLoading}>
           {markLoading ? 'Updating…' : 'Mark all read'}
         </button>
       </div>
 
-      {error ? <p style={{ color: '#b91c1c' }}>{error}</p> : null}
+      {error ? <ErrorState message={error} /> : null}
 
       {loading ? (
-        <p>Loading notifications…</p>
+        <LoadingState label='Loading notifications' />
       ) : notifications.length === 0 ? (
-        <div className='card'>
-          <p style={{ margin: 0, color: '#475569' }}>No notifications are available right now.</p>
-        </div>
+        <EmptyState title='All clear' description='No notifications are available right now.' />
       ) : (
         <div className='card-grid'>
           {notifications.map((notification) => (
             <div key={notification.id} className='card' style={{ opacity: notification.read ? 0.72 : 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start' }}>
                 <div>
-                  <p className='eyebrow'>{notification.notification_type.toUpperCase()}</p>
+                  <StatusBadge status={notification.notification_type} />
                   <h2 style={{ margin: '0.75rem 0 0', fontSize: '1.05rem' }}>{notification.title}</h2>
                 </div>
                 {!notification.read ? (

@@ -1,12 +1,65 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import logo from '../../BFF_logo-removebg-preview.png';
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const pathname = usePathname();
+  const navigation = [
+    { href: '/dashboard', label: 'Overview', icon: '◈' },
+    { href: '/core', label: 'Operations', icon: '⌘' },
+    { href: '/members', label: 'Members', icon: '◎' },
+    { href: '/volunteers', label: 'Volunteers', icon: '◇' },
+    { href: '/donations', label: 'Donations', icon: '₦' },
+    { href: '/events', label: 'Events', icon: '□' },
+    { href: '/news', label: 'News', icon: '≡' },
+  ];
+  const utilityNavigation = [
+    { href: '/notifications', label: 'Notifications' },
+    { href: '/file-uploads', label: 'Files' },
+    { href: '/references', label: 'References' },
+    { href: '/settings', label: 'Settings' },
+  ];
+
+  const closeMenu = () => setMobileOpen(false);
+  const currentPage = navigation.find((item) => pathname === item.href)?.label || 'BFF Ops';
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem('bff-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setDarkMode(savedTheme === 'dark' || (!savedTheme && prefersDark));
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
+    window.localStorage.setItem('bff-theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  function Navigation({ mobile = false }: { mobile?: boolean }) {
+    return (
+      <nav className={mobile ? 'mobile-nav open' : 'sidebar-nav'} aria-label={mobile ? 'Mobile navigation' : 'Primary navigation'}>
+        <p className='nav-section-label'>Workspace</p>
+        {navigation.map((item) => (
+          <Link key={item.href} href={item.href} onClick={closeMenu} className='nav-item'>
+            <span className='nav-icon' aria-hidden='true'>{item.icon}</span>
+            <span>{item.label}</span>
+          </Link>
+        ))}
+        <p className='nav-section-label nav-section-spaced'>Manage</p>
+        {utilityNavigation.map((item) => (
+          <Link key={item.href} href={item.href} onClick={closeMenu} className='nav-item'>
+            <span className='nav-icon' aria-hidden='true'>•</span>
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
+    );
+  }
 
   return (
     <header className='site-header'>
@@ -19,22 +72,27 @@ export default function Header() {
           </div>
         </Link>
 
-        <nav className='desktop-nav'>
-          <Link href='/'>Home</Link>
-          <Link href='/members'>Members</Link>
-          <Link href='/volunteers'>Volunteers</Link>
-          <Link href='/donations'>Donations</Link>
-          <Link href='/events'>Events</Link>
-          <Link href='/news'>News</Link>
-          <Link href='/dashboard'>Dashboard</Link>
-          <Link href='/core'>Core</Link>
-          <Link href='/auth/login'>Login</Link>
-        </nav>
+        <div className='mobile-page-context' aria-live='polite'>
+          <strong>{currentPage}</strong>
+          <span>BFF Ops</span>
+        </div>
+
+        <button
+          type='button'
+          className='theme-toggle'
+          onClick={() => setDarkMode((enabled) => !enabled)}
+          aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <span aria-hidden='true'>{darkMode ? '☀' : '◐'}</span>
+        </button>
 
         <button
           type='button'
           onClick={() => setMobileOpen((prev) => !prev)}
           aria-label='Toggle navigation menu'
+          aria-expanded={mobileOpen}
+          aria-controls='mobile-navigation'
           className='menu-toggle'
         >
           <span className={mobileOpen ? 'bar bar-top open' : 'bar bar-top'} />
@@ -43,26 +101,40 @@ export default function Header() {
         </button>
       </div>
 
-      <nav className={mobileOpen ? 'mobile-nav open' : 'mobile-nav'}>
-        <Link href='/' onClick={() => setMobileOpen(false)}>Home</Link>
-        <Link href='/members' onClick={() => setMobileOpen(false)}>Members</Link>
-        <Link href='/volunteers' onClick={() => setMobileOpen(false)}>Volunteers</Link>
-        <Link href='/donations' onClick={() => setMobileOpen(false)}>Donations</Link>
-        <Link href='/events' onClick={() => setMobileOpen(false)}>Events</Link>
-        <Link href='/news' onClick={() => setMobileOpen(false)}>News</Link>
-        <Link href='/dashboard' onClick={() => setMobileOpen(false)}>Dashboard</Link>
-        <Link href='/core' onClick={() => setMobileOpen(false)}>Core</Link>
+      <aside className='desktop-sidebar'>
+        <Navigation />
+        <div className='sidebar-account'>
+          <span className='account-avatar' aria-hidden='true'>B</span>
+          <div><strong>BFF workspace</strong><span>Secure operations</span></div>
+          <Link href='/auth/logout' aria-label='Log out' className='logout-mark'>↗</Link>
+        </div>
+      </aside>
+
+      <div id='mobile-navigation' className={mobileOpen ? 'mobile-drawer visible' : 'mobile-drawer'}>
+        <Navigation mobile />
+      </div>
+
+      <nav className='mobile-bottom-nav' aria-label='Quick navigation'>
+        {navigation.slice(0, 4).map((item) => (
+          <Link key={item.href} href={item.href} className={pathname === item.href ? 'bottom-nav-item active' : 'bottom-nav-item'} aria-current={pathname === item.href ? 'page' : undefined}>
+            <span aria-hidden='true'>{item.icon}</span>
+            <small>{item.label}</small>
+          </Link>
+        ))}
+        <button type='button' className={mobileOpen ? 'bottom-nav-item active' : 'bottom-nav-item'} onClick={() => setMobileOpen((open) => !open)} aria-expanded={mobileOpen} aria-controls='mobile-navigation'>
+          <span aria-hidden='true'>+</span>
+          <small>More</small>
+        </button>
       </nav>
 
       <style jsx>{`
         .site-header {
-          position: sticky;
+          position: relative;
           top: 0;
-          z-index: 50;
+          z-index: 20;
           width: 100%;
-          background: rgba(233, 243, 255, 0.96);
-          border-bottom: 1px solid rgba(37, 99, 235, 0.16);
-          backdrop-filter: blur(16px);
+          background: #ffffff;
+          border-bottom: 1px solid #dfe7df;
         }
 
         .header-inner {
@@ -96,52 +168,33 @@ export default function Header() {
           color: #475569;
         }
 
-        .desktop-nav {
-          display: none;
-          flex-direction: row;
-          gap: 28px;
-          align-items: center;
-        }
+        .mobile-page-context { display: none; flex: 1; text-align: center; }
+        .mobile-page-context strong, .mobile-page-context span { display: block; }
+        .mobile-page-context strong { color: #17221d; font-size: .88rem; }
+        .mobile-page-context span { color: #718077; font-size: .68rem; margin-top: 2px; }
 
-        .mobile-nav {
+        .desktop-sidebar { display: none; }
+        .sidebar-nav, .mobile-nav {
           display: flex;
           flex-direction: column;
-          gap: 18px;
-          max-height: 0;
-          overflow: hidden;
-          opacity: 0;
-          padding: 0 1.5rem;
-          transition: max-height 0.25s ease, opacity 0.25s ease, padding 0.25s ease;
-          border-bottom: 1px solid transparent;
+          gap: 5px;
         }
-
-        .mobile-nav.open {
-          max-height: 500px;
-          opacity: 1;
-          padding: 1rem 1.5rem 1.25rem;
-          border-bottom: 1px solid rgba(148, 163, 184, 0.18);
-        }
-
-        .desktop-nav a,
-        .mobile-nav a {
-          color: #0f172a;
-          font-weight: 600;
-          font-size: 0.98rem;
-          text-decoration: none;
-          transition: color 0.2s ease, transform 0.15s ease;
-        }
-
-        .desktop-nav a:hover,
-        .mobile-nav a:hover {
-          color: #2563eb;
-          transform: translateY(-1px);
-        }
-
-        .desktop-nav a:active,
-        .mobile-nav a:active {
-          color: #1d4ed8;
-          transform: translateY(1px);
-        }
+        .nav-section-label { margin: 0 0 8px; color: #7b8b82; font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+        .nav-section-spaced { margin-top: 22px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; min-height: 43px; padding: 0 13px; border-radius: 11px; color: #52645a; font-size: .92rem; font-weight: 700; transition: background .2s ease, color .2s ease, transform .2s ease; }
+        .nav-item:hover { color: #176b4d; background: #eef7f1; transform: translateX(2px); }
+        .nav-icon { width: 20px; color: #789184; text-align: center; font-size: 1.1rem; }
+        .sidebar-account { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 14px 0 0; border-top: 1px solid #dfe7df; }
+        .account-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #176b4d; color: white; font-weight: 800; }
+        .sidebar-account div { display: grid; gap: 2px; flex: 1; }
+        .sidebar-account strong { font-size: .78rem; color: #23332a; }
+        .sidebar-account span { color: #829188; font-size: .72rem; }
+        .logout-mark { color: #9b3030; font-weight: 800; }
+        .mobile-drawer { display: grid; grid-template-rows: 0fr; overflow: hidden; background: #fbfdfb; transition: grid-template-rows .25s ease; }
+        .mobile-drawer.visible { grid-template-rows: 1fr; border-top: 1px solid #eef2ee; }
+        .mobile-drawer .mobile-nav { min-height: 0; padding: 0 1.5rem; overflow: hidden; }
+        .mobile-drawer.visible .mobile-nav { padding: 1rem 1.5rem 1.25rem; }
+        .mobile-bottom-nav { display: none; }
 
         .menu-toggle {
           display: inline-flex;
@@ -155,6 +208,9 @@ export default function Header() {
           cursor: pointer;
           padding: 0;
         }
+
+        .theme-toggle { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid #dfe7df; border-radius: 11px; background: transparent; color: #52645a; cursor: pointer; font-size: 1.05rem; }
+        .theme-toggle:hover { background: #eef7f1; color: #176b4d; }
 
         .bar {
           display: block;
@@ -182,14 +238,21 @@ export default function Header() {
         }
 
         @media (min-width: 900px) {
-          .desktop-nav {
-            display: flex;
-          }
+          .site-header { min-height: 74px; }
+          .menu-toggle, .mobile-drawer { display: none; }
+          .desktop-sidebar { position: fixed; top: 74px; bottom: 0; left: 0; display: flex; flex-direction: column; width: 238px; padding: 28px 18px 20px; background: #ffffff; border-right: 1px solid #dfe7df; }
+        }
 
-          .mobile-nav,
-          .menu-toggle {
-            display: none;
-          }
+        @media (max-width: 899px) {
+          .brand > div { display: none; }
+          .brand img { width: 38px; height: 38px; }
+          .mobile-page-context { display: block; }
+          .header-inner { min-height: 64px; padding: .75rem 1rem; }
+          .theme-toggle { width: 38px; height: 38px; }
+          .mobile-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 30; display: flex; align-items: center; min-height: 70px; padding: .35rem .4rem calc(.35rem + env(safe-area-inset-bottom, 0px)); background: rgba(255,255,255,.94); border-top: 1px solid #dfe7df; box-shadow: 0 -8px 24px rgba(36,62,48,.08); backdrop-filter: blur(16px); }
+          .bottom-nav-item { display: grid; place-items: center; flex: 1; min-height: 52px; gap: 3px; border: 0; background: transparent; color: #7a8980; font-size: 1.15rem; cursor: pointer; }
+          .bottom-nav-item small { font-size: .65rem; font-weight: 700; }
+          .bottom-nav-item.active { color: #176b4d; }
         }
       `}</style>
     </header>

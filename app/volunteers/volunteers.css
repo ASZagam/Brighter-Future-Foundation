@@ -1,0 +1,117 @@
+/* Volunteer & Deployment Roster — ops shell styles.
+   Reuses shared members.css classes (dossier, modal, env-stack, badges) and
+   dashboard.css (db-shell). This file adds volunteer layout + dispatch map. */
+
+.vol-content { padding: 18px 24px 26px; color: #172033; font-family: Inter, system-ui, sans-serif; }
+.vol-kicker { display: flex; gap: 9px; align-items: center; color: #087f5b; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+.vol-kicker i { color: #bdc5cf; font-style: normal; }
+.vol-heading { display: flex; justify-content: space-between; gap: 22px; align-items: flex-end; margin: 8px 0 16px; }
+.vol-heading h1 { margin: 0; color: #172033; font-size: 25px; line-height: 1.1; letter-spacing: -.02em; }
+.vol-heading p { max-width: 680px; margin: 6px 0 0; color: #6b7584; font-size: 13px; line-height: 1.55; }
+.vol-actions { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+.vol-actions button { border: 1px solid #e2e4ee; border-radius: 4px; background: #fff; color: #536071; font-size: 12px; font-weight: 700; padding: 8px 11px; cursor: pointer; }
+.vol-actions button.primary { border-color: #087f5b; background: #087f5b; color: #fff; }
+.vol-live-notice { margin: -4px 0 9px; padding: 8px 11px; border: 1px solid #b9dccd; border-radius: 4px; background: #f0faf6; color: #13735a; font-size: 12px; }
+.vol-live-notice.warn { border-color: #f1d59a; background: #fff9e9; color: #896b22; }
+
+/* Dispatch / live deployment panel */
+.vol-dispatch { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr); gap: 12px; margin-bottom: 14px; align-items: stretch; }
+.vol-dispatch-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #ececf4; background: #fbfbfe; }
+.vol-dispatch-title strong { font-size: 12px; color: #172033; }
+.vol-dispatch-title span { color: #8993a0; font-size: 11px; }
+.vol-map { position: relative; min-height: 218px; border: 1px solid #e3e5ef; border-radius: 5px; overflow: hidden; background:
+  radial-gradient(circle at 20% 22%, rgba(8,127,91,.06) 0 60px, transparent 61px),
+  radial-gradient(circle at 78% 68%, rgba(8,127,91,.05) 0 80px, transparent 81px),
+  linear-gradient(160deg, #fdfdfe, #eef3f7);
+}
+.vol-map-canvas { position: absolute; inset: 0; }
+.vol-map-grid { position: absolute; inset: 0; opacity: .5;
+  background-image: linear-gradient(#dbe4ea 1px, transparent 1px), linear-gradient(90deg, #dbe4ea 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+.vol-map-pin { position: absolute; transform: translate(-50%, -100%); display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50% 50% 50% 4px; background: #087f5b; color: #fff; font-size: 10px; font-weight: 900; box-shadow: 0 2px 6px rgba(23,32,51,.3); cursor: pointer; }
+.vol-map-pin.onleave { background: #c2600a; }
+.vol-map-pin.offline { background: #b52e42; }
+.vol-map-pin:hover { z-index: 3; transform: translate(-50%, -100%) scale(1.12); }
+.vol-map-pin::after { content: ""; position: absolute; bottom: -12px; left: 50%; width: 3px; height: 12px; background: rgba(23,32,51,.22); }
+.vol-map-legend { position: absolute; left: 10px; bottom: 10px; z-index: 2; display: flex; gap: 10px; padding: 6px 9px; border: 1px solid #e4e6f0; border-radius: 4px; background: #fff; color: #7c8794; font-size: 10px; }
+.vol-map-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 50% 50% 50% 2px; background: #087f5b; vertical-align: middle; }
+.vol-map-legend .onleave i { background: #c2600a; }
+.vol-map-legend .offline i { background: #b52e42; }
+.vol-dispatch-empty { position: absolute; inset: 0; display: grid; place-items: center; color: #8993a0; font-size: 12px; }
+.vol-site-list { border: 1px solid #e3e5ef; border-radius: 5px; background: #fff; overflow: hidden; }
+.vol-site-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-top: 1px solid #f0f1f5; background: #fff; color: inherit; font: inherit; }
+.vol-site-row:first-child { border-top: 0; }
+.vol-site-avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #dff6ec; color: #087f5b; font-size: 10px; font-weight: 800; flex-shrink: 0; }
+.vol-site-main { min-width: 0; }
+.vol-site-main strong { display: block; font-size: 12px; color: #172033; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vol-site-main small { display: block; color: #8993a0; font-size: 10px; line-height: 1.4; }
+.vol-site-side { margin-left: auto; text-align: right; min-width: 96px; }
+.vol-site-side b { display: block; color: #087f5b; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.vol-site-side span { display: block; color: #8993a0; font-size: 9px; margin-top: 2px; }
+
+/* KPI override grid */
+.vol-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+
+/* Roster grid override (volunteers has one extra column) */
+.vol-table-head, .vol-row { grid-template-columns: 26px 1.3fr 1.05fr .8fr 1.2fr 1fr .7fr .55fr; }
+.vol-table-head { display: grid; gap: 9px; align-items: center; padding: 9px 12px; background: #f6f7fb; color: #7c8794; font-size: 11px; font-weight: 800; letter-spacing: .03em; }
+.vol-row { display: grid; gap: 9px; align-items: center; width: 100%; padding: 9px 12px; border: 0; border-top: 1px solid #f0f1f5; background: #fff; color: #172033; text-align: left; cursor: pointer; transition: background .12s ease; }
+.vol-row:hover { background: #f6faf8; }
+.vol-row.selected { background: #f0fbf6; box-shadow: inset 3px 0 0 #087f5b; }
+.vol-status-dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; background: #087f5b; vertical-align: middle; }
+.vol-status-dot.deployed { background: #087f5b; }
+.vol-status-dot.standby { background: #2b8a3e; }
+.vol-status-dot.on_leave { background: #c2600a; }
+.vol-status-dot.pending_signoff { background: #7a5bbb; }
+.vol-status-dot.inactive, .vol-status-dot.suspended { background: #b52e42; }
+
+/* Compliance bar */
+.vol-compliance { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.vol-compliance i { display: block; height: 5px; border-radius: 3px; background: #e9edf3; }
+.vol-compliance i b { display: block; height: 100%; border-radius: inherit; background: #087f5b; }
+.vol-compliance small { color: #8993a0; font-size: 10px; }
+
+/* Deployed chip */
+.vol-deploy-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 3px 7px; border-radius: 3px; background: #e6f0ff; color: #33608f; font-size: 10px; font-weight: 800; }
+.vol-deploy-chip.none { background: #edf0f5; color: #687382; }
+.vol-deploy-chip b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Shift verifier rows in dossier */
+.vol-shift-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 9px 0 9px 2px; border-top: 1px solid #f0f1f5; }
+.vol-shift-row:first-of-type { border-top: 0; }
+.vol-shift-main strong { display: block; color: #344054; font-size: 12px; }
+.vol-shift-main span { display: block; margin-top: 2px; color: #8993a0; font-size: 10px; line-height: 1.45; }
+.vol-shift-actions { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+.vol-shift-actions button { border: 1px solid #e2e4ee; border-radius: 3px; background: #fff; color: #536071; font-size: 10px; font-weight: 700; padding: 5px 8px; cursor: pointer; }
+.vol-shift-actions button.green { border-color: #087f5b; background: #087f5b; color: #fff; }
+.vol-shift-actions button.amber { border-color: #c2600a; background: #fff6ec; color: #9a4d08; }
+.vol-shift-actions button:disabled { opacity: .5; cursor: wait; }
+.vol-shift-note { margin-top: 6px; padding: 7px 9px; border-radius: 4px; background: #fff9e9; border: 1px solid #f1d59a; color: #896b22; font-size: 10px; }
+
+/* Skills chips */
+.vol-skill-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.vol-skill-chip { padding: 3px 7px; border-radius: 3px; background: #e6eef8; color: #456886; font-size: 10px; font-weight: 700; }
+
+/* Live GPS stamp */
+.vol-gps-live { color: #7c8794; font-size: 10px; }
+.vol-gps-live b { color: #087f5b; font-weight: 800; }
+
+/* Reuse shared badges/progress */
+.member-progress-cells i b { background: #087f5b; }
+
+@media (max-width: 1180px) {
+  .vol-kpis { grid-template-columns: repeat(2, 1fr); }
+  .members-layout { grid-template-columns: 1fr; }
+  .vol-dispatch { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+  .vol-content { padding: 14px; }
+  .vol-heading { display: block; }
+  .vol-actions { justify-content: flex-start; margin-top: 12px; }
+  .vol-table-head { display: none; }
+  .vol-row { grid-template-columns: 26px 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .members-live-dot, .member-progress i, .member-kpi .member-kpi-top-badge { animation: none !important; transition: none !important; }
+}

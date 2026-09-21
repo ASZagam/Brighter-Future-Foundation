@@ -11,7 +11,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const response = await fetch(backendProxyUrl('/donations/'), {
+    const response = await fetch(backendProxyUrl('/core/donations/'), {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${accessToken}`,

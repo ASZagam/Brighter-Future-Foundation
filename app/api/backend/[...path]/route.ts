@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
+import { cookies } from 'next/headers';
 
 const DJANGO_API_URL = process.env.DJANGO_API_URL || process.env.NEXT_PUBLIC_DJANGO_API_URL || 'http://localhost:8000/api';
 
@@ -15,8 +16,13 @@ async function proxyRequest(request: NextRequest, resolvedParams: { path?: strin
   const backendUrl = buildBackendUrl(resolvedParams.path ?? [], true);
   const headers = new Headers(request.headers);
   headers.delete('host');
+  const accessToken = (await cookies()).get('accessToken')?.value;
+  if (accessToken && !headers.has('authorization')) {
+    headers.set('authorization', `Bearer ${accessToken}`);
+  }
 
-  const proxyResponse = await fetch(backendUrl, {
+  const targetUrl = `${backendUrl}${request.nextUrl.search}`;
+  const proxyResponse = await fetch(targetUrl, {
     method: request.method,
     headers,
     body: ['GET', 'HEAD', 'OPTIONS'].includes(request.method) ? undefined : request.body,
