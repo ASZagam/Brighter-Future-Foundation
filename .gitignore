@@ -53,3 +53,17 @@ logs/
 # build artifacts
 # ======================
 build/
+
+# ======================
+# TypeScript incremental build cache
+# ======================
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# ======================
+# local scratch assets (root)
+# ======================
+/Dashboard.png
+/dash.png
+/Html → Body.png
+/Screenshot from 2026-09-03 18-21-32.png
