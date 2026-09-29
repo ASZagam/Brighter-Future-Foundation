@@ -169,7 +169,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
     fetch('/api/auth/me', { credentials: 'include' })
       .then((response) => (response.ok ? response.json() : null))
       .then((me) => {
-        if (me && mounted) setCanWrite(Boolean(me.is_superuser) || Array.isArray(me.role_names) && ['super_admin', 'admin', 'coordinator'].some((role) => me.role_names.includes(role)));
+        if (me && mounted) setCanWrite(Boolean(me.is_super_admin) || (Array.isArray(me.role_names) && ['super_admin', 'admin', 'coordinator'].some((role) => me.role_names.includes(role))));
       })
       .catch(() => {});
     return () => {
@@ -218,7 +218,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
       if (activeTab !== 'all' && row.deployment_status !== activeTab) return false;
       if (clusterFilter && row.cluster !== clusterFilter) return false;
       if (squadFilter && row.squad !== squadFilter) return false;
-      if (specializationFilter && !row.skills_list.includes(specializationFilter)) return false;
+      if (specializationFilter && !(row.skills_list ?? []).includes(specializationFilter)) return false;
       if (term) {
         const haystack = `${row.volunteer_id} ${row.full_name} ${row.phone} ${row.lga} ${row.state} ${row.email}`.toLowerCase();
         if (!haystack.includes(term)) return false;
@@ -281,7 +281,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
   const clusterOptions = useMemo(() => Array.from(new Set(volunteers.map((row) => row.cluster).filter(Boolean))).sort(), [volunteers]);
   const squadOptions = useMemo(() => Array.from(new Set(volunteers.map((row) => row.squad).filter(Boolean))).sort(), [volunteers]);
   const specializationOptions = useMemo(
-    () => Array.from(new Set([...(stats?.options?.specializations ?? []), ...volunteers.flatMap((row) => row.skills_list)])).sort(),
+    () => Array.from(new Set([...(stats?.options?.specializations ?? []), ...volunteers.flatMap((row) => row.skills_list ?? [])])).sort(),
     [volunteers, stats]
   );
 
@@ -423,7 +423,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
       </div>
       {notice && <div className="vol-live-notice">{notice}</div>}
       {formError && <div className="vol-live-notice warn">{formError}{' '}
-        <button type="button" onClick={() => setFormError(null)} style={{ marginLeft: 6, border: 'none', background: 'none', color: '#896b22', fontWeight: 800, cursor: 'pointer', fontSize: 11 }}>Dismiss</button></div>}
+        <button type="button" onClick={() => setFormError(null)} style={{ marginLeft: 6, border: 'none', background: 'none', color: 'var(--warning-text)', fontWeight: 800, cursor: 'pointer', fontSize: 11 }}>Dismiss</button></div>}
 
       <div className="vol-dispatch">
         <LiveDeploymentMap locations={locations} liveStatus={liveStatus} onSelect={(id) => selectVolunteer(id)} />
@@ -432,14 +432,14 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
 
       <div className="vol-kpis">
         <div className="member-kpi reveal-up">
-          <span className="member-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#087f5b" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <span className="member-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" style={{ stroke: 'var(--brand-text)' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span className="member-kpi-label">REGISTERED FIELD<br />VOLUNTEERS</span>
           <strong>{k.total_field_volunteers ?? '—'}</strong>
           <small>Active pool {k.active ?? 0}</small>
           <span className="member-kpi-foot">{liveStatus === 'loading' ? 'Syncing…' : `${liveCount} live in PostgreSQL`}</span>
         </div>
         <div className="member-kpi reveal-up">
-          <span className="member-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#087f5b" strokeWidth="2"><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+          <span className="member-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" style={{ stroke: 'var(--brand-text)' }}><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
           <span className="member-kpi-label">LIVE DEPLOYMENTS<br />IN THE FIELD</span>
           <strong>{k.active_deployment ?? '—'}</strong>
           <small>Across {k.clusters_active ?? 0} clusters</small>
@@ -455,7 +455,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
         <div className="member-kpi reveal-up">
           <span className="member-kpi-top-badge amber">{k.pending_verification ?? 0}</span>
           <span className="member-kpi-label">SHIFT LOGS<br />PENDING VERIFICATION</span>
-          <strong>{k.avg_hours_per_week ?? '—'}<small style={{ display: 'inline', marginLeft: 4, fontSize: 11, color: '#7b8490' }}>avg hrs/wk</small></strong>
+          <strong>{k.avg_hours_per_week ?? '—'}<small style={{ display: 'inline', marginLeft: 4, fontSize: 11, color: 'var(--text-muted)' }}>avg hrs/wk</small></strong>
           <small>{k.logged_hours_ytd ?? 0} hrs logged YTD</small>
           <span className="member-kpi-foot">Compliance {k.compliance ?? 0}% · {k.within_sla ?? 0} w/in 7-day SLA</span>
         </div>
@@ -505,7 +505,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
             </select>
           </label>
           <label className="members-advanced-reset">
-            <button type="button" className="members-more-btn" onClick={resetFilters} style={{ width: '100%', padding: '6px 8px', border: '1px solid #e3e5ef', borderRadius: 4, background: '#fff' }}>Reset All Filters</button>
+            <button type="button" className="members-more-btn" onClick={resetFilters} style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border-subtle)', borderRadius: 4, background: 'var(--bg-surface)' }}>Reset All Filters</button>
           </label>
         </div>
       )}
@@ -564,7 +564,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
               </div>
               <div className="member-cell">
                 <div className="vol-skill-chips">
-                  {row.skills_list.length > 0 ? row.skills_list.slice(0, 2).map((skill) => (
+                  {(row.skills_list ?? []).length > 0 ? (row.skills_list ?? []).slice(0, 2).map((skill) => (
                     <span key={skill} className="vol-skill-chip">{skill}</span>
                   )) : <small className="member-meta">No specializations</small>}
                 </div>
@@ -577,7 +577,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
               <div className="member-cell">
                 <div className="vol-compliance">
                   <i><b style={{ width: `${Math.min(100, row.compliance_score ?? 0)}%` }} /></i>
-                  <small><b style={{ color: '#172033' }}>{row.total_hours ?? 0}h</b> approved · {row.compliance_score ?? 0}%</small>
+                  <small><b style={{ color: 'var(--text-primary)' }}>{row.total_hours ?? 0}h</b> approved · {row.compliance_score ?? 0}%</small>
                 </div>
               </div>
               <div className="member-actions">
@@ -616,7 +616,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
             onQueryOpen={(log) => setQueryLog(log)}
           />
         ) : (
-          <aside className="member-dossier" style={{ display: 'grid', placeItems: 'center', minHeight: 220, color: '#8a93a0', fontSize: 10 }}>
+          <aside className="member-dossier" style={{ display: 'grid', placeItems: 'center', minHeight: 220, color: 'var(--text-muted)', fontSize: 10 }}>
             Select a volunteer to open its dossier.
           </aside>
         )}
@@ -794,7 +794,7 @@ function VolunteerDossier({
       </div>
       <div className="dossier-status-row">
         <span className="dossier-status-pill">{DEPLOY_LABEL[volunteer.deployment_status] ?? volunteer.status}</span>
-        <span className="dossier-status-pill" style={{ background: tone === 'red' ? '#fde4e5' : '#dff6ec', color: tone === 'red' ? '#b52e42' : '#087f5b' }}>{volunteer.status.toUpperCase()} STATUS</span>
+        <span className="dossier-status-pill" style={{ background: tone === 'red' ? 'var(--danger-soft)' : 'var(--brand-soft)', color: tone === 'red' ? 'var(--danger-text)' : 'var(--brand-text)' }}>{volunteer.status.toUpperCase()} STATUS</span>
       </div>
       <div className="dossier-profile">
         <span className="member-avatar">{initials(volunteer.full_name ?? 'NV')}</span>
@@ -830,10 +830,10 @@ function VolunteerDossier({
               <p className="stage-detail">Phone {volunteer.phone || '—'} · Email {volunteer.email || '—'} · {volunteer.gender || '—'} · Joined {dateOnly(volunteer.joined_date)} · {volunteer.years_of_experience || 0} years of field experience.</p>
             </div>
           </div>
-          <div className="dossier-section-header"><span>VERIFIED SKILLS</span><span>{volunteer.skills_list.length} recorded</span></div>
-          {volunteer.skills_list.length > 0 ? (
+          <div className="dossier-section-header"><span>VERIFIED SKILLS</span><span>{(volunteer.skills_list ?? []).length} recorded</span></div>
+          {(volunteer.skills_list ?? []).length > 0 ? (
             <div className="vol-skill-chips" style={{ marginBottom: 8 }}>
-              {volunteer.skills_list.map((skill) => <span key={skill} className="vol-skill-chip">{skill}</span>)}
+              {(volunteer.skills_list ?? []).map((skill) => <span key={skill} className="vol-skill-chip">{skill}</span>)}
             </div>
           ) : <p className="stage-detail">No credentials or skills recorded yet.</p>}
           {volunteer.occupation && <p className="stage-detail" style={{ marginTop: 8 }}>Occupation: {volunteer.occupation} {volunteer.organization ? `· ${volunteer.organization}` : ''}</p>}
@@ -860,8 +860,8 @@ function VolunteerDossier({
           </div>
           {panel === 'reassign' ? (
             <div style={{ marginTop: 10 }}>
-              <label style={{ display: 'grid', gap: 5, color: '#536071', fontSize: 12, fontWeight: 700 }}>Reassign squad
-                <input value={squadValue} onChange={(event) => setSquadValue(event.target.value)} placeholder="e.g. ZONE 6" style={{ padding: '9px 11px', border: '1px solid #dfe3ec', borderRadius: 4, background: '#fbfcfe', color: '#172033', fontSize: 13 }} />
+              <label style={{ display: 'grid', gap: 5, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>Reassign squad
+                <input value={squadValue} onChange={(event) => setSquadValue(event.target.value)} placeholder="e.g. ZONE 6" style={{ padding: '9px 11px', border: '1px solid var(--border-subtle)', borderRadius: 4, background: 'var(--bg-inset)', color: 'var(--text-primary)', fontSize: 13 }} />
               </label>
               <div className="dossier-actions">
                 <button type="button" onClick={() => setPanel('idle')}>Cancel</button>
@@ -887,7 +887,7 @@ function VolunteerDossier({
                 <strong>{log.activity || 'Field operation'}</strong>
                 <span>#{log.shift_id} · {dateOnly(log.date)} · {log.hours}h · {log.program_title ?? 'No program'} · {log.location || 'No location'}</span>
                 {log.approval_status === 'pending' && log.query_note && <div className="vol-shift-note">Query: {log.query_note}</div>}
-                {log.approval_status !== 'pending' && log.reviewer_name && <span className="vol-shift-note" style={{ background: '#f0faf6', borderColor: '#b9dccd', color: '#13735a' }}>Reviewed by {log.reviewer_name} · {log.approval_status.toUpperCase()}</span>}
+                {log.approval_status !== 'pending' && log.reviewer_name && <span className="vol-shift-note" style={{ background: 'var(--brand-soft)', borderColor: 'var(--brand-soft-border)', color: 'var(--brand-text)' }}>Reviewed by {log.reviewer_name} · {log.approval_status.toUpperCase()}</span>}
               </div>
               {log.approval_status === 'pending' ? (
                 <div className="vol-shift-actions">
@@ -951,8 +951,8 @@ function VolunteerDossier({
 
       {panel === 'suspend' ? (
         <div style={{ marginTop: 10 }}>
-          <label style={{ display: 'grid', gap: 5, color: '#536071', fontSize: 12, fontWeight: 700 }}>Suspension reason
-            <textarea value={suspendReason} onChange={(event) => setSuspendReason(event.target.value)} rows={3} placeholder="Required — recorded to audit log" style={{ padding: '9px 11px', border: '1px solid #dfe3ec', borderRadius: 4, background: '#fbfcfe', color: '#172033', fontSize: 13 }} />
+          <label style={{ display: 'grid', gap: 5, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>Suspension reason
+            <textarea value={suspendReason} onChange={(event) => setSuspendReason(event.target.value)} rows={3} placeholder="Required — recorded to audit log" style={{ padding: '9px 11px', border: '1px solid var(--border-subtle)', borderRadius: 4, background: 'var(--bg-inset)', color: 'var(--text-primary)', fontSize: 13 }} />
           </label>
           <div className="dossier-actions">
             <button type="button" onClick={() => { setPanel('idle'); setSuspendReason(''); }}>Cancel</button>
@@ -1018,14 +1018,14 @@ function RegisterVolunteerModal({ skills, saving, onClose, onSubmit }: { skills:
           <label>Squad<input value={form.squad} onChange={(event) => setForm({ ...form, squad: event.target.value })} placeholder="Zone 1" /></label>
           <label>Status<select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}><option value="active">Active</option><option value="pending">Pending</option><option value="on_leave">On Leave</option></select></label>
         </div>
-        <label style={{ display: 'grid', gap: 5, marginTop: 12, color: '#536071', fontSize: 12, fontWeight: 700 }}>Skills / specializations
+        <label style={{ display: 'grid', gap: 5, marginTop: 12, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>Skills / specializations
           <div className="vol-skill-chips">
             {skills.map((skill) => (
-              <button key={skill.id} type="button" className={`member-action${form.skills.includes(skill.name) ? ' selected' : ''}`} style={form.skills.includes(skill.name) ? { borderColor: '#087f5b', background: '#087f5b', color: '#fff' } : {}} onClick={() => setForm((prev) => ({ ...prev, skills: prev.skills.includes(skill.name) ? prev.skills.filter((name) => name !== skill.name) : [...prev.skills, skill.name] }))}>
+              <button key={skill.id} type="button" className={`member-action${form.skills.includes(skill.name) ? ' selected' : ''}`} style={form.skills.includes(skill.name) ? { borderColor: 'var(--brand-text)', background: 'var(--brand-solid)', color: 'var(--text-inverse)' } : {}} onClick={() => setForm((prev) => ({ ...prev, skills: prev.skills.includes(skill.name) ? prev.skills.filter((name) => name !== skill.name) : [...prev.skills, skill.name] }))}>
                 {skill.name}
               </button>
             ))}
-            {skills.length === 0 && <span style={{ color: '#8993a0', fontSize: 11 }}>No skills registered yet (volunteer-skills registry empty).</span>}
+            {skills.length === 0 && <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>No skills registered yet (volunteer-skills registry empty).</span>}
           </div>
         </label>
         <div className="member-modal-actions">
@@ -1092,12 +1092,12 @@ function ConfirmModal({ title, prompt, placeholder, confirmLabel, danger, onCanc
           <button type="button" className="member-modal-close" aria-label="Close" onClick={onCancel}>×</button>
         </div>
         <p className="member-modal-copy">{prompt}</p>
-        <label style={{ display: 'grid', gap: 5, color: '#536071', fontSize: 12, fontWeight: 700 }}>Reason / note
-          <textarea required value={value} onChange={(event) => setValue(event.target.value)} rows={3} placeholder={placeholder} style={{ padding: '9px 11px', border: '1px solid #dfe3ec', borderRadius: 4, background: '#fbfcfe', color: '#172033', fontSize: 13 }} />
+        <label style={{ display: 'grid', gap: 5, color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700 }}>Reason / note
+          <textarea required value={value} onChange={(event) => setValue(event.target.value)} rows={3} placeholder={placeholder} style={{ padding: '9px 11px', border: '1px solid var(--border-subtle)', borderRadius: 4, background: 'var(--bg-inset)', color: 'var(--text-primary)', fontSize: 13 }} />
         </label>
         <div className="member-modal-actions">
           <button type="button" onClick={onCancel}>Cancel</button>
-          <button type="submit" className={danger ? undefined : 'primary'} style={danger ? { border: '1px solid #f3c8c4', background: '#fff5f3', color: '#b33520' } : undefined}>{confirmLabel}</button>
+          <button type="submit" className={danger ? undefined : 'primary'} style={danger ? { border: '1px solid var(--danger-border)', background: 'var(--danger-soft)', color: 'var(--danger-text)' } : undefined}>{confirmLabel}</button>
         </div>
       </form>
     </div>

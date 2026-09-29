@@ -63,6 +63,3 @@ urlpatterns = [
     path('public-showcase/', PublicShowcaseView.as_view(), name='public-showcase'),
     path('organization/', OrganizationProfileView.as_view(), name='organization-profile'),
 ]
-
-
-urlpatterns += router.urls

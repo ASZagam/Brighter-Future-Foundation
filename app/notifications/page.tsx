@@ -92,8 +92,8 @@ export default function NotificationsPage() {
                   <span className='action-button' style={{ minHeight: 'auto', padding: '10px 14px' }}>Read</span>
                 )}
               </div>
-              <p style={{ color: '#475569', margin: '16px 0' }}>{notification.message}</p>
-              <p style={{ margin: 0, color: '#64748b' }}>{notification.category || 'General'} · {new Date(notification.sent_at).toLocaleString()}</p>
+              <p style={{ color: 'var(--text-secondary)', margin: '16px 0' }}>{notification.message}</p>
+              <p style={{ margin: 0, color: 'var(--text-muted)' }}>{notification.category || 'General'} · {new Date(notification.sent_at).toLocaleString()}</p>
             </div>
           ))}
         </div>

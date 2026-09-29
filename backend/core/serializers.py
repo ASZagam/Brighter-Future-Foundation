@@ -80,9 +80,22 @@ class ProgramReportSerializer(serializers.ModelSerializer):
 
 
 class ProgramVolunteerAssignmentSerializer(serializers.ModelSerializer):
+    program_title = serializers.CharField(source="program.title", read_only=True)
+    program_ref = serializers.CharField(source="program.program_id", read_only=True)
+
     class Meta:
         model = ProgramVolunteerAssignment
-        fields = ["id", "program", "volunteer", "assigned_by", "assigned_at", "notes", "is_active"]
+        fields = [
+            "id",
+            "program",
+            "program_title",
+            "program_ref",
+            "volunteer",
+            "assigned_by",
+            "assigned_at",
+            "notes",
+            "is_active",
+        ]
         read_only_fields = ["id", "program", "assigned_by", "assigned_at"]
 
 

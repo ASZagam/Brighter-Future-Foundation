@@ -44,13 +44,81 @@ Where the viewset declares them:
 - `400` validation → `{ "field": ["message"] }`
 - `401`/`403`/`404` → `{ "detail": "message" }`
 
-> The front end's `apiCall` currently shortens error messages by reading an `error`
-> key. Django uses `detail`, so error text may fall back to the HTTP status. Keep this
-> in mind when adding UI error handling.
+> The front end's `apiCall` reads `detail` first, then `error`, and attaches the HTTP
+> status to the thrown error, so UI handlers can branch on `err.status`.
 
 ### Trailing slash
 Django expects a trailing slash. The proxy adds it automatically; from `curl` or
 scripts, include it.
+
+### Public API — `/api/v2/public/`
+
+A separate, unauthenticated namespace for the public marketing site. It is versioned
+independently of the management API so the public contract cannot drift. **No
+credentials are required** for any endpoint in this section, and none expose personal
+or internal data.
+
+| Endpoint | Method | Returns |
+| --- | --- | --- |
+| `/organization/` | GET | Active `OrganizationProfile`, or `404` if none is published |
+| `/impact-summary/` | GET | `metrics[]` (label/value/available/unit/source), `transparency`, `countries` |
+| `/capabilities/` | GET | Active `ProgramCategory` list |
+| `/programs/` | GET | Published programs (non-deleted, `planning`/`active`/`completed`) |
+| `/programs/<slug>/` | GET | One published program, else `404` |
+| `/field-reports/` | GET | `ProgramReport` where `status="published"` |
+| `/newsroom/` | GET | `NewsPost` where `published=True` |
+| `/events/` | GET | Upcoming `Event` where `is_public=True` |
+| `/gallery/` | GET | `ProgramGallery` where `published` and an image exists |
+| `/allocation/` | GET | `FinancialAllocation` where `is_published=True` (approved) |
+| `/transparency/` | GET | `funds_raised`, `budget_committed`, `expenditure_recorded`, `allocations[]`, `allocation_total_percentage` |
+| `/newsletter/subscribe/` | POST | `201` `subscribed` / `200` `already_subscribed` / `200` `resubscribed` |
+| `/donations/` | POST | `201` recorded pledge, `status` always `pending` |
+
+**Honest figures.** Metrics without a backing record are returned with
+`"available": false` and a null value rather than an estimate:
+
+```json
+{ "label": "People reached", "value": 0, "available": false, "unit": null, "source": "Program.beneficiary_count" }
+```
+
+**Newsletter subscription** — `POST /newsletter/subscribe/`
+
+```json
+{ "email": "person@example.com", "name": "Person", "source": "landing_page" }
+```
+
+Emails are trimmed and lower-cased. Re-subscribing an inactive address reactivates it
+(`resubscribed`); an already-active address returns `already_subscribed` without creating
+a duplicate. Throttled to 10/hour. A filled `website` honeypot returns `201` and stores
+nothing.
+
+**Public donation pledge** — `POST /donations/`
+
+```json
+{ "donor_name": "Jane", "donor_email": "jane@example.com", "amount": "5000", "campaign": "" }
+```
+
+`status` is **not** an accepted field — a public submission is always stored as `pending`
+and must be confirmed by an administrator once payment is received. Throttled to 5/hour.
+
+### Roles and permissions
+Django is the only security boundary; the Next.js app mirrors these rules for
+navigation only. Roles are flat — there is no implicit hierarchy. `is_superuser`
+and `User.is_super_admin` bypass every role check.
+
+| Role | Can do |
+| --- | --- |
+| `super_admin`, `admin` | Everything, including organizations, settings, audit logs, system info, reference tables and program deletion |
+| `coordinator` | Programs (CRUD incl. delete is admin-only), members, volunteers, beneficiaries, donations, program documents/reports/assignments, activity logs, reference tables |
+| `volunteer` | Authenticated reads only (programs, program categories, published news, public events, countries/states, own file uploads, own notifications) |
+| `member`, `donor` | Same as `volunteer` |
+| no role | Authenticated reads only; every management endpoint is denied |
+
+Ownership rules: a non-privileged user may only `PATCH/PUT` their **own** member or
+volunteer record, and only for non-status fields. Notifications are always scoped to
+the current user. File uploads are scoped to the current user for non-managers.
+Non-managers only ever see `is_public=True` events and `published=True` news/gallery
+items.
 
 ---
 
@@ -98,6 +166,22 @@ role is attached on creation.
 ```json
 { "old_password": "...", "new_password": "...", "new_password_confirm": "..." }
 ```
+
+### GET `/auth/me/`
+The role payload the front end depends on for every navigation and route decision:
+
+```json
+{
+  "id": "uuid",
+  "username": "jane",
+  "roles": [{ "id": "uuid", "name": "volunteer" }],
+  "role_names": ["volunteer"],
+  "is_super_admin": false
+}
+```
+
+A user may hold several roles; the front end lands them in the highest one
+(`super_admin` > `admin` > `coordinator` > `volunteer` > `member` > `donor`).
 
 ### POST `/auth/request-password-reset/`
 ```json
@@ -237,6 +321,19 @@ Nested resources (each a standard ModelViewSet):
 | GET/POST, `/donations/{id}/` | `/donations/` | Donation records (`amount` is serialized as a string) |
 | GET/POST, `/events/{id}/` | `/events/` | Events and field trips |
 | GET/POST, `/news/{id}/` | `/news/` | News posts (`category` is free text) |
+
+### Self-service endpoints
+Authenticated, read-only, and scoped to the caller. They are the backing API for the
+role workspaces (`/volunteer`, `/member`, `/donor`). When the caller has no matching
+profile, the endpoint returns `404` rather than another user's record.
+
+| Method | Path | Returns |
+| --- | --- | --- |
+| GET | `/members/me/` | The caller's `Member` record |
+| GET | `/volunteers/me/` | The caller's `Volunteer` record |
+| GET | `/volunteer-hours/me/` | Paginated shift logs for the caller's volunteer profile |
+| GET | `/program-volunteer-assignments/me/` | Paginated program assignments (each row includes `program_title` and `program_ref`) |
+| GET | `/programs/mine/` | Paginated programs the caller's volunteer is assigned to |
 
 ---
 

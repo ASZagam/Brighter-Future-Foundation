@@ -35,8 +35,8 @@ export default function DashboardPage() {
     return (
       <div className="db-shell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', padding: 40 }}>
-          <p style={{ fontSize: 14, color: '#DC2626', marginBottom: 12 }}>{error}</p>
-          <a href="/auth/login" style={{ fontSize: 12, color: '#087F5B', fontWeight: 600 }}>Sign in</a>
+          <p style={{ fontSize: 14, color: 'var(--danger-text)', marginBottom: 12 }}>{error}</p>
+          <a href="/auth/login" style={{ fontSize: 12, color: 'var(--brand-text)', fontWeight: 600 }}>Sign in</a>
         </div>
       </div>
     );
@@ -50,7 +50,7 @@ export default function DashboardPage() {
         <div className="db-content">
           <SystemStatusStrip latency={latency} />
           {loading ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#9CA3AF', fontSize: 12 }}>
+            <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--text-faint)', fontSize: 12 }}>
               Loading dashboard data...
             </div>
           ) : (

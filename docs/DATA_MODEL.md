@@ -42,7 +42,13 @@ Organization ──1:1── Settings
 Program ──* ProgramBeneficiary / ProgramDocument / ProgramGallery /
            ProgramReport / ProgramVolunteerAssignment
 
+ProgramCategory ──* Program
+                └──* FinancialAllocation
+Program ───────────* FinancialAllocation
+
 Country ──* State
+
+NewsletterSubscription (standalone)
 ```
 
 ---
@@ -69,6 +75,11 @@ Helper properties: `is_super_admin`, `is_admin`, `is_coordinator`, `is_volunteer
 ### `Role`
 UUID PK. `name` is one of `super_admin`, `admin`, `coordinator`, `volunteer`,
 `donor`, `member`; plus `description`, `is_active`, optional `permissions` M2M.
+
+The six rows are created by the `accounts.0002_seed_canonical_roles` data migration
+(`get_or_create`, so re-running is safe). A user may hold more than one role; the front
+end treats them as flat and picks the highest-priority workspace
+(`super_admin` > `admin` > `coordinator` > `volunteer` > `member` > `donor`).
 
 ### `UserRole`
 Join table between `User` and `Role`.
@@ -149,6 +160,16 @@ The UI derives a **category** from the action prefix in `AuditLogSerializer`
   `board`, `partner`
 - `status`: `pending`, `active`, `inactive`, `suspended`, `archived`
 
+`Member.user` (nullable OneToOne) is what backs `GET /api/core/members/me/`. It is the
+*account* link, not the role: a `User` with the `volunteer` role may have no `Member`
+row, and the endpoint then returns `404`.
+
+### Donations
+
+`Donation` intentionally has **no** link to `User`. Giving records stay in the finance
+ledger and are confirmed by receipt, so the donor workspace (`/donor`) shows foundation
+updates rather than personal giving history. Adding `Donation.user` is deferred.
+
 ### Volunteers
 
 **`Volunteer`** — large profile model.
@@ -170,6 +191,11 @@ The UI derives a **category** from the action prefix in `AuditLogSerializer`
 - Computed: `total_hours`, `approved_hours`, `compliance_score`,
   `assigned_programs`, `active_deployment`, `deployment_status`, `last_shift`,
   `cluster`, `specializations`, `on_site_this_week`
+
+`Volunteer.user` / `Volunteer.member` are the account links used by the volunteer
+workspace: `GET /api/core/volunteers/me/`, `/volunteer-hours/me/`,
+`/program-volunteer-assignments/me/` and `/programs/mine/` all resolve the caller's
+`Volunteer` row and return `404` when there is none.
 
 **Supporting models**
 
@@ -229,6 +255,43 @@ vision, …) served by `GET /api/core/organization/`, also auto-created on deman
 | `VolunteerAvailability` | full_time, part_time, weekends, remote, on_call |
 | `VolunteerHourLog.ApprovalStatus` | pending, approved, rejected |
 | `ProgramDocument.DocumentType` | report, proposal, budget, photo, other |
+| `ProgramReport.REPORT_STATUS` | draft, submitted, verified, published |
 | `Notification.NotificationType` | info, success, warning, error |
 | `FileUpload.UploadType` | image, document |
 | `Donation.Status` | pending, completed, failed |
+
+---
+
+## `public_site` app
+
+Two models exist here because nothing equivalent existed in `core`. Everything the
+public site displays is otherwise read from `core` / `accounts`.
+
+### `NewsletterSubscription`
+A public mailing-list signup collected from the landing page. `email` is unique, so
+signups are inherently deduplicated; the API normalises (trim + lower-case) before
+lookup and reactivates an inactive row rather than inserting a duplicate. `unsubscribe_token`
+is a `UUIDField` for a future unsubscribe link. `source` records where the signup came
+from (e.g. `landing_page`). There is no `IP` or `user_agent` column — abuse control is
+handled by a scoped DRF throttle plus a honeypot field, so no visitor tracking is stored.
+
+### `FinancialAllocation`
+An approved, publishable statement of how funds are allocated, with `label` and
+`percentage` (0–100, validated), an optional `period_label`, and optional links to a
+`Program` and/or `ProgramCategory`. **Only rows with `is_published=True` are ever
+exposed publicly**, so an allocation stays internal until it is signed off.
+`display_order` controls presentation order.
+
+### Publication rules summary
+
+| Model | Public when |
+| --- | --- |
+| `OrganizationProfile` | `is_active` |
+| `ProgramCategory` | `is_active` |
+| `Program` | not `is_deleted` and `status` in planning/active/completed |
+| `ProgramReport` | `status == "published"` |
+| `ProgramGallery` | `published` and an image is set |
+| `NewsPost` | `published` |
+| `Event` | `is_public` and not in the past |
+| `FinancialAllocation` | `is_published` |
+| `Donation` | never listed; only created as `pending` via a public pledge |

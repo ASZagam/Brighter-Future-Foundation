@@ -2,6 +2,7 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { AuthCard, AuthField, AuthStatus, AuthSubmit } from '@/app/components/auth/AuthCard';
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -10,32 +11,41 @@ function ResetPasswordForm() {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
     if (password !== passwordConfirm) {
+      setStatus('error');
       setMessage('Passwords do not match.');
       return;
     }
 
     setLoading(true);
+    setStatus('idle');
+    setMessage('');
+
     try {
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password, password_confirm: passwordConfirm }),
+        body: JSON.stringify({ token, password, password_confirm: passwordConfirm })
       });
 
       if (response.ok) {
-        setMessage('Password reset successful! Redirecting to login...');
+        setStatus('success');
+        setMessage('Password reset successful. Taking you to sign in…');
         setTimeout(() => router.push('/auth/login'), 2000);
       } else {
         const error = await response.json();
+        setStatus('error');
         setMessage(error.error || 'Reset failed.');
       }
-    } catch (err) {
-      setMessage('An error occurred.');
+    } catch {
+      setStatus('error');
+      setMessage('Unable to reach the server. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -43,68 +53,55 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div style={{ maxWidth: 600, margin: '4rem auto', padding: 24, textAlign: 'center' }}>
-        <p style={{ color: '#b91c1c' }}>Invalid reset link.</p>
-      </div>
+      <AuthCard center lockupSubtitle="Account recovery">
+        <p className="ac-eyebrow ac-eyebrow--danger">Invalid link</p>
+        <h1 className="ac-title">This reset link is not valid</h1>
+        <p className="ac-lede">
+          The link may have expired or already been used. Request a new one to continue.
+        </p>
+        <div className="ac-actions">
+          <a className="ac-button" href="/auth/request-password-reset">
+            Request a new link
+          </a>
+        </div>
+      </AuthCard>
     );
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '4rem auto', padding: 24, background: '#fff', borderRadius: 24 }}>
-      <h1>Set New Password</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 20 }}>
-          <label>New Password</label>
-          <input
-            type='password'
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ width: '100%', padding: 12, borderRadius: 12, border: '1px solid #d1d5db', marginTop: 8 }}
-          />
-        </div>
+    <AuthCard lockupSubtitle="Account recovery">
+      <h1 className="ac-title">Set a new password</h1>
+      <p className="ac-lede">Choose a password you have not used before.</p>
 
-        <div style={{ marginBottom: 20 }}>
-          <label>Confirm Password</label>
-          <input
-            type='password'
-            value={passwordConfirm}
-            onChange={(e) => setPasswordConfirm(e.target.value)}
-            required
-            style={{ width: '100%', padding: 12, borderRadius: 12, border: '1px solid #d1d5db', marginTop: 8 }}
-          />
-        </div>
+      <form className="ac-form" onSubmit={handleSubmit}>
+        <AuthField
+          label="New password"
+          type="password"
+          value={password}
+          onChange={setPassword}
+          required
+          autoComplete="new-password"
+        />
+        <AuthField
+          label="Confirm password"
+          type="password"
+          value={passwordConfirm}
+          onChange={setPasswordConfirm}
+          required
+          autoComplete="new-password"
+        />
 
-        <button
-          type='submit'
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: 12,
-            borderRadius: 12,
-            background: loading ? '#9ca3af' : '#1d4ed8',
-            color: '#fff',
-            border: 'none',
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {loading ? 'Resetting...' : 'Reset Password'}
-        </button>
+        <AuthSubmit loading={loading}>{loading ? 'Resetting…' : 'Reset password'}</AuthSubmit>
       </form>
 
-      {message && (
-        <p style={{ marginTop: 16, color: message.includes('successful') ? '#16a34a' : '#b91c1c' }}>
-          {message}
-        </p>
-      )}
-    </div>
+      {status !== 'idle' ? <AuthStatus tone={status === 'success' ? 'success' : 'error'}>{message}</AuthStatus> : null}
+    </AuthCard>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div style={{ maxWidth: 600, margin: '4rem auto', padding: 24 }}>Loading...</div>}>
+    <Suspense fallback={<p className="ac-loading">Loading…</p>}>
       <ResetPasswordForm />
     </Suspense>
   );

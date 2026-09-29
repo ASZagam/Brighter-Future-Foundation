@@ -3,13 +3,13 @@
 import type { ActivityLog } from '../hooks/useDashboard';
 
 const categoryColors: Record<string, string> = {
-  auth: '#087F5B',
-  program: '#2563EB',
-  volunteer: '#E8590C',
-  donation: '#087F5B',
-  member: '#7C3AED',
-  system: '#6B7280',
-  default: '#087F5B',
+  auth: 'var(--brand-text)',
+  program: 'var(--accent-text)',
+  volunteer: 'var(--warning-text)',
+  donation: 'var(--brand-text)',
+  member: 'var(--violet-text)',
+  system: 'var(--text-muted)',
+  default: 'var(--brand-text)',
 };
 
 function getTimeAgo(dateStr: string): string {
@@ -50,7 +50,7 @@ export default function AuditActivityStream({ logs }: { logs: ActivityLog[] }) {
       </div>
       <div className="db-audit-timeline">
         {logs.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#9CA3AF', fontSize: '11px' }}>
+          <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '11px' }}>
             No activity logs recorded yet.
           </div>
         ) : (

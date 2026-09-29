@@ -59,12 +59,14 @@ Two Django apps carry the domain:
 | `/accounts/` | `accounts.urls` | placeholder (empty) |
 | `/dashboard/` | `dashboard.urls` | placeholder (empty) |
 | `/api/` | `accounts.api_urls` | Auth endpoints |
-| `/api/core/` | `core.api_urls` | All domain endpoints |
+| `/api/core/` | `core.api_urls` | All domain endpoints (authenticated) |
+| `/api/v2/public/` | `public_site.urls` | Public, unauthenticated site API — see §2.6 |
 | `/api/schema/` | drf-spectacular | OpenAPI schema |
 | `/api/docs/` | drf-spectacular | Swagger UI |
 
-> **Note:** the live API base is `/api/...`, **not** `/api/v2/...`. Any older reference
-> to a `v2` prefix is stale.
+> **Note:** the *domain* API base is `/api/core/...`, not `/api/v2/...`. The only `v2`
+> namespace is the new **public** site API at `/api/v2/public/...`, which is deliberately
+> versioned and completely separate from the authenticated domain API.
 
 ### 2.3 Views and routers
 
@@ -90,20 +92,28 @@ Custom actions (search `@action` in `core/views.py`) provide the operations feat
 
 ### 2.4 Permissions / RBAC
 
-Role constants live in `accounts.models.Roles` and are checked by the reusable
-permission classes in `accounts.permissions`:
+Role constants live in `accounts.models.Roles` (`super_admin`, `admin`, `coordinator`,
+`volunteer`, `member`, `donor`) and the six rows are seeded by the
+`accounts.0002_seed_canonical_roles` data migration. Roles are **flat** — there is no
+implicit inheritance between them. `is_superuser` and `User.is_super_admin` bypass every
+role check.
+
+The reusable classes in `accounts.permissions`:
 
 | Class | Grants |
 | --- | --- |
-| `IsSuperAdmin` | superuser / `super_admin` |
-| `IsAdmin` | `admin` (also always allows safe methods) |
-| `IsCoordinator` | `coordinator` |
-| `IsVolunteer` / `IsMember` | matching role |
-| `IsAuthenticatedOrRole` | any authenticated user; safe methods for everyone |
-| `CanManageVolunteer` | admins/coordinators, or a volunteer editing themselves |
-| `CanManageMember` | admins/coordinators |
+| `HasRole(*roles)` | exact role match (or superuser / `is_super_admin`) |
+| `IsAdmin` | `admin` (plus superuser / `is_super_admin`) |
+| `IsAdminOrCoordinator` | `admin` or `coordinator` (plus superuser / `is_super_admin`) |
+| `AuthenticatedReadAdminWrite` | any authenticated user may read; writes need `admin` |
+| `AuthenticatedReadAdminCoordinatorWrite` | any authenticated user may read; writes need `admin` or `coordinator` |
+| `IsAuthenticatedOrRole` | any authenticated user, for every method — **fail-closed** |
+| `CanManageVolunteer` | `admin`/`coordinator`, or a volunteer updating their own record |
+| `CanManageMember` | `admin`/`coordinator` |
 
-`core.permissions.IsOrganizationAdmin` guards organization administration.
+Every viewset declares an explicit `permission_classes`; nothing falls back to DRF's
+default. The practical consequence is that a plain authenticated user (no role) is
+denied every management endpoint.
 
 See [backend/accounts/RBAC.md](../backend/accounts/RBAC.md) for how to protect new
 viewsets.
@@ -122,22 +132,118 @@ All privileged actions are recorded in `accounts.AuditLog` via
 > The legacy `core.ActivityLog` model exists but is not written to; the live audit
 > trail is `accounts.AuditLog`.
 
+### 2.6 Public site API (`backend/public_site/`)
+
+An unauthenticated, read-mostly API under `/api/v2/public/`. It is a separate Django app so
+that the public contract cannot drift when the management API changes.
+
+| Endpoint | Method | Source | Publication rule |
+| --- | --- | --- | --- |
+| `/organization/` | GET | `OrganizationProfile` | `is_active`; 404 when none is published |
+| `/impact-summary/` | GET | aggregates over `Program`, `Donation`, `Volunteer`, `Member`, `ProgramReport` | non-deleted programs in `planning/active/completed` |
+| `/capabilities/` | GET | `ProgramCategory` | `is_active` |
+| `/programs/`, `/programs/<slug>/` | GET | `Program` | same program rule as above |
+| `/field-reports/` | GET | `ProgramReport` | `status="published"` |
+| `/newsroom/` | GET | `NewsPost` | `published=True` |
+| `/events/` | GET | `Event` | `is_public` and not past |
+| `/gallery/` | GET | `ProgramGallery` | `published` with an image |
+| `/allocation/` | GET | `FinancialAllocation` | `is_published` (approved) |
+| `/transparency/` | GET | aggregates + `FinancialAllocation` | published only |
+| `/newsletter/subscribe/` | POST | `NewsletterSubscription` | rate limited to 10/hour |
+| `/donations/` | POST | `Donation` | rate limited to 5/hour; always stored as `pending` |
+
+Rules that keep this surface safe:
+
+- **Explicit allowlists.** Every public serializer lists its fields by hand. Internal
+  columns (`created_by`, `manager`, `coordinator`) and report internals
+  (`challenges`, `lessons_learned`, `recommendations`, `submitted_by`) are never exposed.
+- **No personal data.** Donor names/emails, beneficiary records, volunteer phone numbers
+  and member identities are unreachable. Impact figures are counts and sums only.
+- **No invented figures.** A metric with no backing data is returned with
+  `available: false` and a null value; the front end renders "Data pending". Public
+  donations are pledges: `status` is not a writable field, so no public request can mark
+  money as received.
+- **Abuse controls.** Both write endpoints use a scoped throttle, a honeypot field, and
+  idempotent handling (newsletter dedupes on normalised, lower-cased email).
+
+Two new models were required because nothing equivalent existed: `NewsletterSubscription`
+and `FinancialAllocation`. Everything else reuses `core`.
+
 ## 3. Frontend
 
 ### 3.1 App Router and shells
 
 `app/LayoutShell.tsx` picks a shell per route:
 
-- **Operations shell** (`/dashboard`, `/programs`, `/members`, `/volunteers`,
-  `/beneficiaries`, `/core`, `/admin`, `/settings`): renders the page as-is; each page
-  mounts its own `db-shell` with the shared `Sidebar` + `TopHeader`.
-- **Public shell** (everything else, e.g. `/donations`, `/events`, `/news`,
-  `/references`, `/notifications`, `/file-uploads`): renders the public `Header`,
-  content and footer.
+- **Operations shell** (`/admin/*`, `/volunteer`, `/member`, `/donor`,
+  `/file-uploads`, `/notifications`): renders the page as-is; each page mounts its own
+  `db-shell` with the shared `Sidebar` + `TopHeader`. The legacy prefixes (`/dashboard`,
+  `/programs`, `/members`, `/settings`, …) are still matched so the shell is stable even
+  if a redirect has not been applied.
+- **Public shell** (everything else, e.g. `/`, `/forbidden`, `/about`): renders the
+  public `Header`, content and footer.
 
 The ops shell composition is: `db-shell` → `Sidebar` + `db-main` (`TopHeader` + page
 content). See `app/core/CoreShell.tsx` and `app/settings/SettingsShell.tsx` for the
 canonical pattern.
+
+### 3.1.1 Route model and role-aware navigation
+
+| Surface | Routes |
+| --- | --- |
+| Management console (`admin`, `coordinator`) | `/admin`, `/admin/dashboard`, `/admin/programs`, `/admin/members`, `/admin/beneficiaries`, `/admin/volunteers`, `/admin/donations`, `/admin/events`, `/admin/news`, `/admin/core`, `/admin/references`, `/admin/settings`, `/admin/audit` (+ nested `[...slug]` details) |
+| Self-service workspaces | `/volunteer`, `/member`, `/donor` |
+| Shared authenticated tools | `/file-uploads`, `/notifications` |
+| Public marketing site | `/`, `/about`, `/impact`, `/programs`, `/programs/[slug]`, `/news`, `/transparency`, `/donate` |
+| Auth | `/auth/login`, `/auth/register`, `/auth/verify-email`, `/auth/request-password-reset`, `/auth/reset-password` |
+
+`app/admin/**` are thin re-export modules (`export { default } from '@/app/…/page'`)
+so each page keeps a single owning component instead of being duplicated. Legacy URLs
+(`/dashboard`, `/settings`, `/members/…`, `/volunteers/…`, …) are 307-redirected to their
+`/admin` equivalent by `next.config.js`; `/file-uploads` is deliberately **not**
+redirected because every authenticated user may use it.
+
+#### Public site
+
+The public marketing site lives in the route group `app/(public)/` and is server-rendered.
+`app/(public)/layout.tsx` fetches the organization profile once and supplies the header,
+footer and `Organization`/`NGO` JSON-LD; `LayoutShell` deliberately renders these routes
+without the operations chrome.
+
+| Concern | Implementation |
+| --- | --- |
+| Data access | `lib/publicApi.ts` — server-side fetches against Django `/api/v2/public/`, 6s timeout, `no-store` |
+| Failure behaviour | Every helper returns `null`/`[]` on error; sections render an explicit "pending / unavailable" state rather than crashing or inventing a value |
+| Public routes | Listed in `PUBLIC_PREFIXES` (`lib/auth/route-access.ts`) and excluded from `PROTECTED_PREFIXES`, so `middleware.ts` can never gate them |
+| Scoping | `/programs` and `/news` are public; the management equivalents are `/admin/programs` and `/admin/news` |
+| Donations | `/donations` stays the management view; the public pledge form is `/donate` |
+| Styling | `app/public-site.css`, scoped under `.pub-root` so operations CSS is untouched |
+| SEO | `app/sitemap.ts`, `app/robots.ts`, per-page `generateMetadata`, JSON-LD |
+
+Route ownership is a security boundary, so the public prefix list is explicit rather than
+inferred from a negation of the protected list.
+
+The front end mirrors the backend rules in `lib/auth`:
+
+| Module | Responsibility |
+| --- | --- |
+| `roles.ts` | `Roles` enum, `hasRole`, `isAdmin`, `isPrivileged`, `userRoles` |
+| `permissions.ts` | `Capability` matrix and `can(user, capability)` |
+| `navigation.ts` | `landingPathFor`, `workspacesFor`, `NAV_SECTIONS`, `navigationFor` |
+| `route-access.ts` | `PUBLIC_PREFIXES`, `PROTECTED_PREFIXES`, `isProtectedPath`, `canAccessPath` |
+
+Two layers gate navigation:
+
+1. `middleware.ts` runs first. The access token is `HttpOnly`, so middleware can only
+   check that the cookie is *present*; it redirects anonymous visitors to
+   `/auth/login?next=<path>`.
+2. `app/components/RoleGuard.tsx` runs in the browser once `AuthProvider` has resolved
+   the user. It calls `canAccessPath` and sends anyone without access to `/forbidden`.
+
+Because middleware cannot see roles, a user who passes layer 1 can still be stopped by
+layer 2 — and Django stops them regardless. Login honours `?next=` only when the
+resolved destination passes `canAccessPath`, otherwise the user lands in
+`landingPathFor(user)`.
 
 ### 3.2 API access (`lib/api.ts`)
 

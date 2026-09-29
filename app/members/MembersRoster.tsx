@@ -481,7 +481,7 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
 
       <div className="members-kpis">
         <div className="member-kpi reveal-up">
-          <span className="member-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#087f5b" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <span className="member-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" style={{ stroke: 'var(--brand-text)' }}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
           <span className="member-kpi-label">TOTAL ENROLLED<br />MEMBERS</span>
           <strong>{totalMembers}</strong>
           <small>Enrolled</small>
@@ -502,7 +502,7 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
           <span className="member-progress"><i style={{ ['--bar' as string]: `${activePercent}%` }} /></span>
         </div>
         <div className="member-kpi reveal-up">
-          <span className="member-kpi-icon orange"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c2600a" strokeWidth="2"><path d="M3 21h18"/><path d="M5 21V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v13"/><path d="M9 21v-8h6v8"/><path d="M12 6V3"/><path d="m8 4 4-2 4 2"/></svg></span>
+          <span className="member-kpi-icon orange"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" style={{ stroke: 'var(--warning-text)' }}><path d="M3 21h18"/><path d="M5 21V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v13"/><path d="M9 21v-8h6v8"/><path d="M12 6V3"/><path d="m8 4 4-2 4 2"/></svg></span>
           <span className="member-kpi-label">BENEFICIARY<br />MEMBERS</span>
           <strong>{kpis.beneficiaries ?? 0}</strong>
           <small>beneficiaries</small>
@@ -555,12 +555,12 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
             </select>
           </label>
           <label>LIVE FILTERS
-            <span style={{ fontSize: 11, color: '#7c8794', fontWeight: 600 }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
               {[appliedSearch && `“${appliedSearch}”`, stateFilter, typeFilter, statusFilter].filter(Boolean).join(' · ') || 'No filters applied'}
             </span>
           </label>
           <label className="members-advanced-reset">
-            <button type="button" className="members-more-btn" onClick={resetFilters} style={{ width: '100%', padding: '6px 8px', border: '1px solid #e3e5ef', borderRadius: 4, background: '#fff' }}>Reset All Filters</button>
+            <button type="button" className="members-more-btn" onClick={resetFilters} style={{ width: '100%', padding: '6px 8px', border: '1px solid var(--border-subtle)', borderRadius: 4, background: 'var(--bg-surface)' }}>Reset All Filters</button>
           </label>
         </div>
       )}
@@ -655,7 +655,7 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
             onDelete={() => removeMember(selected)}
           />
         ) : (
-          <aside className="member-dossier" style={{ display: 'grid', placeItems: 'center', minHeight: 220, color: '#8a93a0', fontSize: 10 }}>
+          <aside className="member-dossier" style={{ display: 'grid', placeItems: 'center', minHeight: 220, color: 'var(--text-muted)', fontSize: 10 }}>
             Select a member to open its dossier.
           </aside>
         )}

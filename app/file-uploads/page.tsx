@@ -220,7 +220,7 @@ export default function FileUploadsPage() {
                     <tr key={upload.id}>
                       <td>
                         <span className="strong">{upload.title || 'Untitled file'}</span>
-                        {upload.description ? <><br /><span style={{ color: '#8993a0', fontSize: 11 }}>{upload.description}</span></> : null}
+                        {upload.description ? <><br /><span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{upload.description}</span></> : null}
                       </td>
                       <td><span className={`ops-chip ${upload.upload_type === 'image' ? 'blue' : 'grey'}`}>{upload.upload_type || 'file'}</span></td>
                       <td className="num">{formatBytes(upload.size)}</td>

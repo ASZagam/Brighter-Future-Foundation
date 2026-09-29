@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { AuthCard, AuthField, AuthStatus, AuthSubmit } from '@/app/components/auth/AuthCard';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,53 +19,76 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError('');
 
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullName, email, phone, password })
-    });
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, email, phone, password })
+      });
 
-    if (response.ok) {
-      router.push('/dashboard');
-    } else {
-      const body = await response.json();
-      setError(body.error || 'Unable to create account');
+      if (response.ok) {
+        // Registration does not sign the user in, and a new account has no role
+        // yet, so send them to sign in rather than to a route that would bounce
+        // them straight back to /forbidden.
+        router.push('/auth/login');
+      } else {
+        const body = await response.json();
+        setError(body.error || 'Unable to create account');
+      }
+    } catch {
+      setError('Unable to reach the server. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }
 
   return (
-    <div style={{ maxWidth: 520, margin: '4rem auto', padding: '2rem', background: '#fff', borderRadius: 24, boxShadow: '0 20px 60px rgba(15,23,42,0.1)' }}>
-      <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>Create your BFF account</h1>
-      <p style={{ color: '#475569', fontSize: '0.9rem' }}>Register for membership and access foundation tools.</p>
+    <AuthCard lockupSubtitle="Create your foundation account">
+      <h1 className="ac-title">Create your BFF account</h1>
+      <p className="ac-lede">Register for membership and access foundation tools.</p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16, marginTop: 24 }}>
-        <label style={{ display: 'grid', gap: 8, fontSize: '0.9rem' }}>
-          Full Name
-          <input value={fullName} onChange={(event) => setFullName(event.target.value)} type="text" required style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid #cbd5e1', fontSize: '0.9rem' }} />
-        </label>
+      <form className="ac-form" onSubmit={handleSubmit}>
+        <AuthField
+          label="Full name"
+          value={fullName}
+          onChange={setFullName}
+          required
+          autoComplete="name"
+        />
+        <AuthField
+          label="Email"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          required
+          autoComplete="email"
+        />
+        <AuthField
+          label="Phone"
+          type="tel"
+          value={phone}
+          onChange={setPhone}
+          autoComplete="tel"
+        />
+        <AuthField
+          label="Password"
+          type="password"
+          value={password}
+          onChange={setPassword}
+          required
+          autoComplete="new-password"
+        />
 
-        <label style={{ display: 'grid', gap: 8, fontSize: '0.9rem' }}>
-          Email
-          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid #cbd5e1', fontSize: '0.9rem' }} />
-        </label>
+        {error ? <AuthStatus tone="error">{error}</AuthStatus> : null}
 
-        <label style={{ display: 'grid', gap: 8, fontSize: '0.9rem' }}>
-          Phone
-          <input value={phone} onChange={(event) => setPhone(event.target.value)} type="tel" style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid #cbd5e1', fontSize: '0.9rem' }} />
-        </label>
-
-        <label style={{ display: 'grid', gap: 8, fontSize: '0.9rem' }}>
-          Password
-          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" required style={{ padding: '12px 14px', borderRadius: 12, border: '1px solid #cbd5e1', fontSize: '0.9rem' }} />
-        </label>
-
-        {error && <div style={{ color: '#b91c1c', fontSize: '0.85rem' }}>{error}</div>}
-        <button type="submit" disabled={isLoading} style={{ padding: '14px', borderRadius: 14, background: '#2563eb', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 500 }}>
-          {isLoading ? 'Creating account…' : 'Register'}
-        </button>
+        <AuthSubmit loading={isLoading}>{isLoading ? 'Creating account…' : 'Register'}</AuthSubmit>
       </form>
-    </div>
+
+      <div className="ac-footer">
+        <p>
+          Already have an account? <Link className="ac-link" href="/auth/login">Sign in</Link>
+        </p>
+      </div>
+    </AuthCard>
   );
 }

@@ -124,7 +124,7 @@ export default function AdminAudit() {
           <div className="admin-kicker" style={{ fontSize: 12 }}>
             <span>SYSTEM &amp; ADMIN</span>
             <i>|</i>
-            <span style={{ color: '#6b7584', fontWeight: 600 }}>Immutable activity ledger from /api/core/activity-logs/</span>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Immutable activity ledger from /api/core/activity-logs/</span>
           </div>
 
           <div className="admin-heading">

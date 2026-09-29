@@ -67,3 +67,7 @@ tsconfig.tsbuildinfo
 /dash.png
 /Html → Body.png
 /Screenshot from 2026-09-03 18-21-32.png
+/landing.png
+
+# user-uploaded runtime media (test uploads, seeded documents, avatars)
+/backend/media/uploads/

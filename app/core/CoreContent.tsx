@@ -53,7 +53,7 @@ export default function CoreContent() {
       <div className="core-kicker" style={{ fontSize: 12 }}>
         <span>FOUNDATION &amp; ADMINISTRATION</span>
         <i>|</i>
-        <span style={{ color: '#6b7584', fontWeight: 600 }}>Core backend health, uploads, notifications &amp; audit</span>
+        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Core backend health, uploads, notifications &amp; audit</span>
       </div>
 
       <div className="core-heading">

@@ -140,25 +140,30 @@ class Program(models.Model):
 
     @property
     def remaining_budget(self):
-        return self.budget - self.amount_spent
+        return (self.budget or 0) - (self.amount_spent or 0)
 
     @property
     def percentage_budget_used(self):
         if not self.budget:
             return 0
-        return round((self.amount_spent / self.budget) * 100, 2)
+        return round(((self.amount_spent or 0) / self.budget) * 100, 2)
 
     def clean(self):
         super().clean()
         if self.start_date and self.end_date and self.end_date < self.start_date:
             raise ValidationError({"end_date": "End date cannot be before start date."})
-        if self.budget < 0:
+        # Decimal fields default to 0 but can still arrive as None from a
+        # partial payload, so every comparison below is null-guarded.
+        budget = self.budget or 0
+        amount_spent = self.amount_spent or 0
+        funding_target = self.funding_target or 0
+        if self.budget is not None and self.budget < 0:
             raise ValidationError({"budget": "Budget cannot be negative."})
-        if self.amount_spent < 0:
+        if self.amount_spent is not None and self.amount_spent < 0:
             raise ValidationError({"amount_spent": "Amount spent cannot be negative."})
-        if self.amount_spent > self.budget:
+        if amount_spent > budget:
             raise ValidationError({"amount_spent": "Amount spent cannot exceed budget."})
-        if self.funding_target < 0:
+        if self.funding_target is not None and self.funding_target < 0:
             raise ValidationError({"funding_target": "Funding target cannot be negative."})
 
     def save(self, *args, **kwargs):
@@ -308,11 +313,31 @@ class ProgramReport(models.Model):
     )
     submitted_at = models.DateTimeField(auto_now_add=True)
 
+    REPORT_STATUS = [
+        ("draft", "Draft"),
+        ("submitted", "Submitted"),
+        ("verified", "Verified"),
+        ("published", "Published"),
+    ]
+
+    status = models.CharField(
+        max_length=20,
+        choices=REPORT_STATUS,
+        default="draft",
+        db_index=True,
+    )
+    location = models.CharField(max_length=255, blank=True)
+    is_featured = models.BooleanField(default=False)
+
     class Meta:
         ordering = ["-submitted_at"]
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_public(self):
+        return self.status == "published"
 
 
 class ProgramVolunteerAssignment(models.Model):

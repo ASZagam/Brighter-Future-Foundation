@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "accounts",
     "core",
     "dashboard",
+    "public_site",
     
 ]
 
@@ -176,6 +177,15 @@ REST_FRAMEWORK = {
 
     "DEFAULT_SCHEMA_CLASS":
         "drf_spectacular.openapi.AutoSchema",
+
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.ScopedRateThrottle",
+    ],
+
+    "DEFAULT_THROTTLE_RATES": {
+        "newsletter": os.getenv("NEWSLETTER_THROTTLE_RATE", "10/hour"),
+        "donation": os.getenv("DONATION_THROTTLE_RATE", "5/hour"),
+    },
 }
 
 

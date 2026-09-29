@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { AuthCard, AuthStatus } from '@/app/components/auth/AuthCard';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -22,20 +23,20 @@ function VerifyEmailContent() {
         const response = await fetch('/api/auth/verify-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
+          body: JSON.stringify({ token })
         });
 
         if (response.ok) {
           setStatus('success');
-          setMessage('Email verified successfully! You can now sign in.');
+          setMessage('Email verified successfully. You can now sign in.');
         } else {
           setStatus('error');
           const error = await response.json();
           setMessage(error.error || 'Verification failed.');
         }
-      } catch (err) {
+      } catch {
         setStatus('error');
-        setMessage('An error occurred during verification.');
+        setMessage('Unable to reach the server. Please try again.');
       }
     }
 
@@ -43,28 +44,39 @@ function VerifyEmailContent() {
   }, [token]);
 
   return (
-    <div style={{ maxWidth: 600, margin: '4rem auto', padding: 24, background: '#fff', borderRadius: 24, textAlign: 'center' }}>
-      <h1>Verify Your Email</h1>
-      {status === 'loading' && <p>Verifying...</p>}
-      {status === 'success' && (
+    <AuthCard center lockupSubtitle="Account verification">
+      <h1 className="ac-title">Verify your email</h1>
+
+      {status === 'loading' ? <p className="ac-lede">Verifying…</p> : null}
+
+      {status === 'success' ? (
         <>
-          <p style={{ color: '#16a34a' }}>{message}</p>
-          <Link href='/auth/login' style={{ color: '#2563eb' }}>Sign in</Link>
+          <AuthStatus tone="success">{message}</AuthStatus>
+          <div className="ac-actions">
+            <Link className="ac-button" href="/auth/login">
+              Sign in
+            </Link>
+          </div>
         </>
-      )}
-      {status === 'error' && (
+      ) : null}
+
+      {status === 'error' ? (
         <>
-          <p style={{ color: '#b91c1c' }}>{message}</p>
-          <Link href='/auth/register' style={{ color: '#2563eb' }}>Back to register</Link>
+          <AuthStatus tone="error">{message}</AuthStatus>
+          <div className="ac-actions">
+            <Link className="ac-button" href="/auth/register">
+              Back to register
+            </Link>
+          </div>
         </>
-      )}
-    </div>
+      ) : null}
+    </AuthCard>
   );
 }
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div style={{ maxWidth: 600, margin: '4rem auto', padding: 24 }}>Loading...</div>}>
+    <Suspense fallback={<p className="ac-loading">Loading…</p>}>
       <VerifyEmailContent />
     </Suspense>
   );

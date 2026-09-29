@@ -2,81 +2,71 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { AuthCard, AuthField, AuthStatus, AuthSubmit } from '@/app/components/auth/AuthCard';
 
 export default function RequestPasswordResetPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  // 'idle' | 'success' | 'error', so the styling is not inferred from the
+  // message text the way it used to be.
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     setLoading(true);
+    setStatus('idle');
+    setMessage('');
 
     try {
       const response = await fetch('/api/auth/request-password-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email })
       });
 
       if (response.ok) {
-        setMessage('Password reset link sent to your email.');
+        setStatus('success');
+        setMessage('If that email address has an account, a reset link is on its way.');
         setEmail('');
       } else {
         const error = await response.json();
+        setStatus('error');
         setMessage(error.error || 'Failed to send reset link.');
       }
-    } catch (err) {
-      setMessage('An error occurred.');
+    } catch {
+      setStatus('error');
+      setMessage('Unable to reach the server. Please try again.');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '4rem auto', padding: 24, background: '#fff', borderRadius: 24 }}>
-      <h1>Reset Password</h1>
-      <p style={{ color: '#475569' }}>Enter your email address to receive a password reset link.</p>
+    <AuthCard lockupSubtitle="Account recovery">
+      <h1 className="ac-title">Reset your password</h1>
+      <p className="ac-lede">Enter your email address to receive a password reset link.</p>
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 20 }}>
-          <label>Email Address</label>
-          <input
-            type='email'
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: 12, borderRadius: 12, border: '1px solid #d1d5db', marginTop: 8 }}
-          />
-        </div>
-
-        <button
-          type='submit'
+      <form className="ac-form" onSubmit={handleSubmit}>
+        <AuthField
+          label="Email address"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          required
+          autoComplete="email"
           disabled={loading}
-          style={{
-            width: '100%',
-            padding: 12,
-            borderRadius: 12,
-            background: loading ? '#9ca3af' : '#1d4ed8',
-            color: '#fff',
-            border: 'none',
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {loading ? 'Sending...' : 'Send Reset Link'}
-        </button>
+        />
+        <AuthSubmit loading={loading}>{loading ? 'Sending…' : 'Send reset link'}</AuthSubmit>
       </form>
 
-      {message && (
-        <p style={{ marginTop: 16, color: message.includes('sent') ? '#16a34a' : '#b91c1c' }}>
-          {message}
-        </p>
-      )}
+      {status !== 'idle' ? <AuthStatus tone={status === 'success' ? 'success' : 'error'}>{message}</AuthStatus> : null}
 
-      <p style={{ marginTop: 24, color: '#475569' }}>
-        Remember your password? <Link href='/auth/login' style={{ color: '#2563eb' }}>Sign in</Link>
-      </p>
-    </div>
+      <div className="ac-footer">
+        <p>
+          Remember your password? <Link className="ac-link" href="/auth/login">Sign in</Link>
+        </p>
+      </div>
+    </AuthCard>
   );
 }

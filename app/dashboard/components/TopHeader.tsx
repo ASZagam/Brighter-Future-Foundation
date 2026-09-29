@@ -7,43 +7,31 @@ import { usePathname } from 'next/navigation';
 export default function TopHeader({ notificationCount }: { notificationCount: number }) {
   const [searchFocused, setSearchFocused] = useState(false);
   const pathname = usePathname();
-  const isPrograms = pathname.startsWith('/programs');
-  const isMembers = pathname.startsWith('/members');
-  const isVolunteers = pathname.startsWith('/volunteers');
-  const isBeneficiaries = pathname.startsWith('/beneficiaries');
-  const isCore = pathname.startsWith('/core');
-  const isAdmin = pathname.startsWith('/admin');
-  const isSettings = pathname.startsWith('/settings');
-  const isDonations = pathname.startsWith('/donations');
-  const isEvents = pathname.startsWith('/events');
-  const isNews = pathname.startsWith('/news');
-  const isReferences = pathname.startsWith('/references');
-  const isFileUploads = pathname.startsWith('/file-uploads');
-  const breadcrumbLabel = isPrograms
-    ? 'Programs Overview'
-    : isMembers
-      ? 'Members & Community Roster'
-      : isVolunteers
-        ? 'Volunteers & Deployment'
-        : isBeneficiaries
-          ? 'Beneficiaries Registry'
-          : isCore
-            ? 'Foundation & Administration'
-            : isAdmin
-              ? 'Audit Activity Logs'
-              : isSettings
-                ? 'Organization Settings'
-                : isDonations
-                  ? 'Donations & Grants'
-                  : isEvents
-                    ? 'Events & Field Trips'
-                    : isNews
-                      ? 'News & Media'
-                      : isReferences
-                        ? 'Reference Tables'
-                        : isFileUploads
-                          ? 'File Vault'
-                          : 'Dashboard Overview';
+
+  const LABELS: Record<string, string> = {
+    admin: 'Admin Console',
+    programs: 'Programs Overview',
+    members: 'Members & Community Roster',
+    beneficiaries: 'Beneficiaries Registry',
+    volunteers: 'Volunteers & Deployment',
+    donations: 'Donations & Grants',
+    events: 'Events & Field Trips',
+    news: 'News & Media',
+    'file-uploads': 'File Vault',
+    references: 'Reference Tables',
+    settings: 'Organization Settings',
+    core: 'Foundation & Administration',
+    audit: 'Audit Activity Logs',
+    volunteer: 'Volunteer Hub',
+    member: 'My Membership',
+    donor: 'My Giving',
+    notifications: 'Notifications',
+    dashboard: 'Dashboard Overview',
+  };
+
+  const normalized = pathname.replace(/^\/admin(?=\/|$)/, '') || '';
+  const segment = normalized.split('/').filter(Boolean)[0] ?? (pathname.startsWith('/admin') ? 'admin' : 'dashboard');
+  const breadcrumbLabel = LABELS[segment] ?? 'Operations';
 
   return (
     <header className="db-top-header">

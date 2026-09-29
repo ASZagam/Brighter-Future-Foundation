@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import OpsShell from '../components/OpsShell';
-import { apiCall, apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
+import OpsShell from '../../components/OpsShell';
+import { apiCall, apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api';
 
 interface NewsItem {
   id: string;

@@ -63,7 +63,9 @@ class UserModelTestCase(TestCase):
         self.assertFalse(user.is_volunteer)
         self.assertFalse(user.is_member)
 
-        role = Role.objects.create(name=Roles.ADMIN, description='Administrator role')
+        role, _ = Role.objects.get_or_create(
+            name=Roles.ADMIN, defaults={'description': 'Administrator role'}
+        )
         UserRole.objects.create(user=user, role=role)
 
         self.assertTrue(user.is_admin)
@@ -94,16 +96,21 @@ class RoleModelTestCase(TestCase):
     """Test cases for Role model"""
 
     def setUp(self):
-        """Set up test data"""
-        self.role = Role.objects.create(
+        """Set up test data.
+
+        The canonical roles are seeded by accounts migration 0002, so reuse the
+        seeded row instead of attempting a duplicate insert.
+        """
+        self.role, _ = Role.objects.get_or_create(
             name='super_admin',
-            description='Super administrator role'
+            defaults={'description': 'Super administrator role'},
         )
 
     def test_create_role(self):
         """Test creating a role"""
         self.assertEqual(self.role.name, 'super_admin')
-        self.assertEqual(self.role.description, 'Super administrator role')
+        # The seeded canonical role supplies its own description.
+        self.assertTrue(self.role.description)
 
     def test_role_string_representation(self):
         """Test role string representation"""
@@ -160,11 +167,17 @@ class UserRegistrationAPITestCase(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_user_registration_duplicate_username(self):
-        """Test registration with duplicate username"""
+    def test_user_registration_duplicate_email(self):
+        """Test registration with a duplicate email.
+
+        Email is the identity field and is what registration validates for
+        uniqueness. The submitted `username` is intentionally ignored in favour
+        of a value generated from the name/email (see RegisterSerializer.create),
+        so duplicate usernames are not a registration error.
+        """
         User.objects.create_user(
-            username=self.user_data['username'],
-            email='existing@example.com',
+            username='existing',
+            email='newuser@example.com',
             password='TestPass123!@#'
         )
         response = self.client.post(

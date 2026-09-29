@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import './programs.css';
-import Sidebar from '../dashboard/components/Sidebar';
-import TopHeader from '../dashboard/components/TopHeader';
-import { apiCall, apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api';
-import type { DashboardUser } from '../dashboard/hooks/useDashboard';
+import Sidebar from '../../dashboard/components/Sidebar';
+import TopHeader from '../../dashboard/components/TopHeader';
+import { apiCall, apiDelete, apiGet, apiPatch, apiPost } from '@/lib/api';
+import type { DashboardUser } from '../../dashboard/hooks/useDashboard';
 
 type GalleryImage = { id: number; image: string; caption: string; published: boolean; uploaded_by_name?: string; uploaded_at: string };
 
@@ -188,7 +188,7 @@ function DetailsPanel({ program, detailTab, onTabChange, onEdit, onLogMilestone,
     <div className="program-banner"><span>FIELD OPERATIONS</span><strong>{program.state} {program.cluster !== 'Regional cluster not assigned' ? `/ ${program.cluster}` : ''}</strong></div>
     <div className="detail-stats"><div><strong>{program.beneficiaryCount.toLocaleString()}</strong><small>VERIFIED BENEFICIARIES</small></div><div><strong>{(program.beneficiaries ?? []).length}</strong><small>BENEFICIARY RECORDS</small></div><div><strong>{(program.reports ?? []).length}</strong><small>MILESTONE REPORTS</small></div></div>
     <section className="ledger"><div className="section-label-row"><strong>GRANT ALLOCATION LEDGER</strong><span>{program.utilization.toFixed(1)}% Utilized</span></div><div className="ledger-values"><div><small>COMMITTED</small><strong>{formatMoney(program.budgetValue)}</strong></div><div><small>DISBURSED</small><strong>{formatMoney(program.spentValue)}</strong></div><div><small>BALANCE</small><strong>{formatMoney(program.budgetValue - program.spentValue)}</strong></div></div><div className="detail-progress"><i style={{ width: `${Math.min(program.utilization, 100)}%` }} /></div><p>Primary Grantor: <b>{program.grantor}</b><span>Backend program record</span></p></section>
-    <section className="milestones"><div className="section-label-row"><strong>IMPLEMENTATION MILESTONES</strong><span>{(program.reports ?? []).length} reports</span></div>{(program.reports ?? []).length ? program.reports?.map((report) => <div className="milestone" key={report.id}><b>{report.title || 'Milestone report'}</b><small>{report.summary}</small></div>) : <span style={{ color: '#8a93a0', fontSize: 11 }}>No milestone reports logged yet.</span>}</section>
+    <section className="milestones"><div className="section-label-row"><strong>IMPLEMENTATION MILESTONES</strong><span>{(program.reports ?? []).length} reports</span></div>{(program.reports ?? []).length ? program.reports?.map((report) => <div className="milestone" key={report.id}><b>{report.title || 'Milestone report'}</b><small>{report.summary}</small></div>) : <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>No milestone reports logged yet.</span>}</section>
     <div className="details-actions"><button type="button" onClick={onEdit}>Edit Mandate</button><button type="button" className="primary" onClick={onLogMilestone}>Log Milestone</button></div>
   </aside>;
 }

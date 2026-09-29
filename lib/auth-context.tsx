@@ -6,16 +6,26 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   ReactNode,
 } from 'react';
-import type { AuthenticatedUser } from './auth';
+import type { Capability } from './auth/permissions';
+import { can } from './auth/permissions';
+import type { CurrentUser, Role } from './auth/roles';
+import { hasRole, primaryRole, roleLabel } from './auth/roles';
+import type { Workspace } from './auth/navigation';
+import { landingPathFor, workspacesFor } from './auth/navigation';
 
 interface AuthContextType {
-  user: AuthenticatedUser | null;
+  user: CurrentUser | null;
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  primaryRole: Role;
+  roleLabel: string;
+  workspaces: Workspace[];
+  landingPath: string;
+  login: (identifier: string, password: string) => Promise<CurrentUser>;
   register: (data: {
     username: string;
     email: string;
@@ -29,61 +39,58 @@ interface AuthContextType {
   verifyEmail: (token: string) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
+  can: (capability: Capability) => boolean;
+  hasRole: (...roles: Role[]) => boolean;
   clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthenticatedUser | null>(null);
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch current user on mount
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/auth/me');
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setError(null);
-        } else if (response.status !== 401) {
-          const errorData = await response.json();
-          setError(errorData.error || 'Failed to fetch user');
-        }
-      } catch (err) {
-        console.error('Failed to fetch user:', err);
-      } finally {
-        setLoading(false);
+  const fetchUser = useCallback(async () => {
+    try {
+      const response = await fetch('/api/auth/me', { credentials: 'include' });
+      if (response.ok) {
+        setUser(await response.json());
+        setError(null);
+      } else if (response.status === 401) {
+        setUser(null);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setError(errorData.error || 'Failed to fetch user');
       }
-    };
-
-    fetchUser();
+    } catch (err) {
+      console.error('Failed to fetch user:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const login = useCallback(async (username: string, password: string) => {
-    try {
-      setLoading(true);
-      setError(null);
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
+  const login = useCallback(async (identifier: string, password: string) => {
+    setLoading(true);
+    setError(null);
+    try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username: identifier, password }),
       });
-
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Login failed');
       }
-
       const data = await response.json();
       setUser(data.user);
+      return data.user as CurrentUser;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(message);
@@ -102,24 +109,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string;
       password2: string;
     }) => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        setError(null);
-
         const response = await fetch('/api/auth/register', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data),
         });
-
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || 'Registration failed');
         }
-
-        // Don't set user yet - email verification required
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Registration failed';
         setError(message);
@@ -132,14 +133,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-      });
-
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
       setUser(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Logout failed';
@@ -151,48 +148,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshUser = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/auth/me');
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-        setError(null);
-      } else if (response.status === 401) {
-        setUser(null);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to refresh user');
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to refresh user';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    setLoading(true);
+    await fetchUser();
+  }, [fetchUser]);
 
   const verifyEmail = useCallback(async (token: string) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
       const response = await fetch('/api/auth/verify-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Email verification failed');
       }
-
       const data = await response.json();
-      setUser(data.user);
+      if (data.user) setUser(data.user);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Email verification failed';
       setError(message);
@@ -203,20 +177,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const requestPasswordReset = useCallback(async (email: string) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
       const response = await fetch('/api/auth/request-password-reset', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Password reset request failed');
       }
     } catch (err) {
@@ -228,57 +198,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const resetPassword = useCallback(
-    async (token: string, password: string) => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch('/api/auth/reset-password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            token,
-            new_password: password,
-            new_password_confirm: password,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Password reset failed');
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Password reset failed';
-        setError(message);
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  const clearError = useCallback(() => {
+  const resetPassword = useCallback(async (token: string, password: string) => {
+    setLoading(true);
     setError(null);
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, new_password: password, new_password_confirm: password }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Password reset failed');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Password reset failed';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const value: AuthContextType = {
-    user,
-    loading,
-    error,
-    isAuthenticated: !!user,
-    login,
-    register,
-    logout,
-    refreshUser,
-    verifyEmail,
-    requestPasswordReset,
-    resetPassword,
-    clearError,
-  };
+  const clearError = useCallback(() => setError(null), []);
+
+  const value = useMemo<AuthContextType>(() => {
+    const role = primaryRole(user);
+    return {
+      user,
+      loading,
+      error,
+      isAuthenticated: !!user,
+      primaryRole: role,
+      roleLabel: roleLabel(role),
+      workspaces: workspacesFor(user),
+      landingPath: landingPathFor(user),
+      login,
+      register,
+      logout,
+      refreshUser,
+      verifyEmail,
+      requestPasswordReset,
+      resetPassword,
+      can: (capability: Capability) => can(user, capability),
+      hasRole: (...roles: Role[]) => hasRole(user, ...roles),
+      clearError,
+    };
+  }, [user, loading, error, login, register, logout, refreshUser, verifyEmail, requestPasswordReset, resetPassword, clearError]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

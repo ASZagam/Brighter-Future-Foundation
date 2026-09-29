@@ -57,8 +57,15 @@ export async function apiCall<T = any>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `API call failed: ${response.status}`);
+    const error = await response.json().catch(() => ({}));
+    const message =
+      error.detail ||
+      error.error ||
+      (Array.isArray(error.detail) ? error.detail.join(', ') : '') ||
+      `API call failed: ${response.status}`;
+    const apiError = new Error(message) as Error & { status?: number };
+    apiError.status = response.status;
+    throw apiError;
   }
 
   if (response.status === 204) {

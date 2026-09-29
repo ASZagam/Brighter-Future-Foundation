@@ -166,5 +166,4 @@ export interface AuthenticatedUser {
   }>;
   role_names: string[];
   is_super_admin: boolean;
-  is_admin: boolean;
 }

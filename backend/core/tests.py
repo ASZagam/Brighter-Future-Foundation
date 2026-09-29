@@ -8,6 +8,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 from rest_framework import status
 
+from accounts.models import Role, Roles, UserRole
+
 from .models import (
     Organization,
     Settings,
@@ -89,7 +91,29 @@ class CoreAPITestCase(TestCase):
         self.settings = Settings.objects.create(organization=self.organization)
         self.country = Country.objects.create(name='Sample Country', iso_code='SMP', active=True)
         self.state = State.objects.create(name='Sample State', country=self.country, active=True)
+        # Management endpoints are role-gated, so the acting user needs a role.
+        role, _ = Role.objects.get_or_create(
+            name=Roles.ADMIN, defaults={'description': 'Administrator role'}
+        )
+        UserRole.objects.get_or_create(user=self.user, role=role)
         self.client.force_authenticate(user=self.user)
+
+    def test_management_endpoints_reject_roleless_user(self):
+        """A signed-in user with no role must not reach management endpoints."""
+        from rest_framework.test import APIClient as _APIClient
+
+        roleless = User.objects.create_user(
+            username='roleless',
+            email='roleless@example.com',
+            password='TestPass123!@#',
+            full_name='Roleless',
+        )
+        client = _APIClient()
+        client.force_authenticate(user=roleless)
+        for name in ('dashboard-statistics', 'volunteer-dashboard'):
+            with self.subTest(endpoint=name):
+                response = client.get(reverse(name))
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_program_validation_rejects_invalid_budget(self):
         category = ProgramCategory.objects.create(name='Education', description='Education programs')

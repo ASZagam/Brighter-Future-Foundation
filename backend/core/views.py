@@ -1,6 +1,13 @@
 from rest_framework import viewsets, permissions, status, generics
 
-from accounts.permissions import IsAdmin, IsAuthenticatedOrRole, CanManageMember, CanManageVolunteer
+from accounts.permissions import (
+    AuthenticatedReadAdminCoordinatorWrite,
+    CanManageMember,
+    CanManageVolunteer,
+    IsAdmin,
+    IsAdminOrCoordinator,
+    IsAuthenticatedOrRole,
+)
 from accounts.services import AuditService
 from accounts.models import AuditLog as AccountAuditLog
 
@@ -186,6 +193,23 @@ class MemberViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="me",
+        name="member-me",
+        permission_classes=[IsAuthenticated],
+    )
+    def me(self, request):
+        """Return the Member record linked to the signed-in account."""
+        member = getattr(request.user, "member", None)
+        if member is None:
+            return Response(
+                {"detail": "No member profile is linked to this account."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(MemberSerializer(member).data)
+
     @action(detail=False, methods=["get"], url_path="export", name="member-export")
     def export(self, request):
         rows = self.filter_queryset(self.get_queryset()).order_by("first_name", "last_name")
@@ -318,6 +342,23 @@ class VolunteerViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status=VolunteerStatus.PENDING)
 
         return queryset.distinct()
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="me",
+        name="volunteer-me",
+        permission_classes=[IsAuthenticated],
+    )
+    def me(self, request):
+        """Return the Volunteer profile linked to the signed-in account."""
+        volunteer = getattr(request.user, "volunteer_profile", None)
+        if volunteer is None:
+            return Response(
+                {"detail": "No volunteer profile is linked to this account."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(VolunteerSerializer(volunteer).data)
 
     @action(detail=False, methods=["get"], url_path="dashboard", name="volunteer-dashboard")
     def dashboard(self, request):
@@ -642,6 +683,26 @@ class VolunteerHourLogViewSet(
             queryset = queryset.filter(program__program_id=program)
         return queryset
 
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="me",
+        name="my-hour-logs",
+        permission_classes=[IsAuthenticated],
+    )
+    def me(self, request):
+        """Hour logs belonging to the signed-in volunteer."""
+        volunteer = getattr(request.user, "volunteer_profile", None)
+        if volunteer is None:
+            return Response([], status=status.HTTP_200_OK)
+        queryset = self.get_queryset().filter(volunteer=volunteer)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=["post"], url_path="approve", name="log-approve")
     def approve(self, request, pk=None):
         log = self.get_object()
@@ -781,7 +842,7 @@ class StateViewSet(viewsets.ReadOnlyModelViewSet):
 
 class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
@@ -811,7 +872,7 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
 class FileUploadViewSet(viewsets.ModelViewSet):
     queryset = FileUpload.objects.filter(is_active=True)
     serializer_class = FileUploadSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [IsAuthenticated]
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["upload_type"]
@@ -823,8 +884,13 @@ class FileUploadViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if not self.request.user.is_staff:
-            queryset = queryset.filter(user=self.request.user)
+        user = self.request.user
+        if not (
+            user.is_superuser
+            or getattr(user, "is_super_admin", False)
+            or user.has_any_role("admin", "coordinator")
+        ):
+            queryset = queryset.filter(user=user)
         return queryset
 
     @action(detail=False, methods=["get"], url_path="stats", name="file-upload-stats")
@@ -847,7 +913,7 @@ class FileUploadViewSet(viewsets.ModelViewSet):
 
 
 class DashboardStatisticsView(APIView):
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [IsAdminOrCoordinator]
 
     def get(self, request):
         stats = get_dashboard_statistics(user=request.user)
@@ -857,7 +923,7 @@ class DashboardStatisticsView(APIView):
 class DonationViewSet(viewsets.ModelViewSet):
     queryset = Donation.objects.all()
     serializer_class = DonationSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [IsAdminOrCoordinator]
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["status", "campaign"]
@@ -907,19 +973,30 @@ class DonationViewSet(viewsets.ModelViewSet):
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.select_related("created_by").all()
     serializer_class = EventSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [AuthenticatedReadAdminCoordinatorWrite]
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["is_public"]
     search_fields = ["title", "description", "location"]
     ordering_fields = ["start_date", "end_date", "created_at", "title"]
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not (
+            user.is_superuser
+            or getattr(user, "is_super_admin", False)
+            or user.has_any_role("admin", "coordinator")
+        ):
+            queryset = queryset.filter(is_public=True)
+        return queryset
+
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
 
     @action(detail=False, methods=["get"], url_path="stats", name="event-stats")
     def stats(self, request):
-        base = Event.objects.all()
+        base = self.get_queryset()
         now = timezone.now()
         upcoming = base.filter(start_date__gte=now)
         past = base.filter(end_date__lt=now)
@@ -940,7 +1017,7 @@ class EventViewSet(viewsets.ModelViewSet):
 class NewsPostViewSet(viewsets.ModelViewSet):
     queryset = NewsPost.objects.select_related("author").all()
     serializer_class = NewsPostSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [AuthenticatedReadAdminCoordinatorWrite]
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["published", "category"]
@@ -949,7 +1026,12 @@ class NewsPostViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if not self.request.user.is_staff:
+        user = self.request.user
+        if not (
+            user.is_superuser
+            or getattr(user, "is_super_admin", False)
+            or user.has_any_role("admin", "coordinator")
+        ):
             queryset = queryset.filter(published=True)
         return queryset
 
@@ -1024,7 +1106,7 @@ class SystemInfoView(APIView):
     Read-only live system/stack telemetry for the operations console.
     Exposes framework versions, database vendor, and registry counters.
     """
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdmin]
 
     def get(self, request):
         import django

@@ -32,7 +32,7 @@ export default function GeographicCommand({ states, programDash }: { states: Sta
     <div className="db-geo-card">
       <div className="db-geo-header">
         <div className="db-geo-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#087F5B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'var(--brand-text)' }}><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
           <div>
             <h2>Geographic Command &amp; State Footprint</h2>
             <p className="db-geo-subtitle">Real-time hub presence across northern/southern operational corridors</p>
@@ -43,21 +43,21 @@ export default function GeographicCommand({ states, programDash }: { states: Sta
       <div className="db-geo-map">
         <div className="db-geo-map-inner">
           <svg viewBox="0 0 800 500" className="db-geo-map-svg">
-            <rect width="800" height="500" fill="#F0F4F0" />
+            <rect width="800" height="500" style={{ fill: 'var(--bg-subtle)' }} />
             {[...Array(20)].map((_, i) => (
-              <line key={`h${i}`} x1="0" y1={i * 25} x2="800" y2={i * 25} stroke="#E2E8E2" strokeWidth="0.5" />
+              <line key={`h${i}`} x1="0" y1={i * 25} x2="800" y2={i * 25}  strokeWidth="0.5" style={{ stroke: 'var(--text-inverse-muted)' }} />
             ))}
             {[...Array(32)].map((_, i) => (
-              <line key={`v${i}`} x1={i * 25} y1="0" x2={i * 25} y2="500" stroke="#E2E8E2" strokeWidth="0.5" />
+              <line key={`v${i}`} x1={i * 25} y1="0" x2={i * 25} y2="500"  strokeWidth="0.5" style={{ stroke: 'var(--text-inverse-muted)' }} />
             ))}
-            <path d="M100 100 Q300 150 500 120 T750 200" stroke="#CBD5E0" strokeWidth="3" fill="none" />
-            <path d="M50 300 Q200 250 400 280 T700 220" stroke="#CBD5E0" strokeWidth="2.5" fill="none" />
-            <path d="M300 50 Q350 200 380 350 T400 480" stroke="#CBD5E0" strokeWidth="2" fill="none" />
-            <path d="M150 200 Q250 280 350 260 T550 300" stroke="#CBD5E0" strokeWidth="2" fill="none" />
-            <text x="200" y="95" fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">A2 Highway</text>
-            <text x="420" y="275" fill="#94A3B8" fontSize="8" fontFamily="Inter, sans-serif">Kaduna-Abuja Express</text>
-            <rect x="310" y="290" width="120" height="100" rx="8" fill="rgba(8,127,91,0.06)" stroke="#087F5B" strokeWidth="1" strokeDasharray="4 3" />
-            <text x="335" y="310" fill="#087F5B" fontSize="11" fontFamily="Inter, sans-serif" fontWeight="700">FCT Abuja</text>
+            <path d="M100 100 Q300 150 500 120 T750 200"  strokeWidth="3" fill="none" style={{ stroke: 'var(--text-inverse-muted)' }} />
+            <path d="M50 300 Q200 250 400 280 T700 220"  strokeWidth="2.5" fill="none" style={{ stroke: 'var(--text-inverse-muted)' }} />
+            <path d="M300 50 Q350 200 380 350 T400 480"  strokeWidth="2" fill="none" style={{ stroke: 'var(--text-inverse-muted)' }} />
+            <path d="M150 200 Q250 280 350 260 T550 300"  strokeWidth="2" fill="none" style={{ stroke: 'var(--text-inverse-muted)' }} />
+            <text x="200" y="95"  fontSize="8" fontFamily="Inter, sans-serif" style={{ fill: 'var(--text-faint)' }}>A2 Highway</text>
+            <text x="420" y="275"  fontSize="8" fontFamily="Inter, sans-serif" style={{ fill: 'var(--text-faint)' }}>Kaduna-Abuja Express</text>
+            <rect x="310" y="290" width="120" height="100" rx="8" fill="rgba(8,127,91,0.06)"  strokeWidth="1" strokeDasharray="4 3" style={{ stroke: 'var(--brand-text)' }} />
+            <text x="335" y="310"  fontSize="11" fontFamily="Inter, sans-serif" fontWeight="700" style={{ fill: 'var(--brand-text)' }}>FCT Abuja</text>
 
             {/* Render state hubs from API */}
             {states.filter((s) => s.active).map((state) => {
@@ -67,12 +67,12 @@ export default function GeographicCommand({ states, programDash }: { states: Sta
               return (
                 <g key={state.id}>
                   <circle cx={coord.x} cy={coord.y} r={10 + Math.min(progCount * 2, 10)} fill="rgba(8,127,91,0.08)" />
-                  <circle cx={coord.x} cy={coord.y} r={5.5} fill="#087F5B" stroke="#fff" strokeWidth="1.5" />
-                  <text x={coord.x + 10} y={coord.y + 4} fill="#1F2937" fontSize="9" fontFamily="Inter, sans-serif" fontWeight="600">
+                  <circle cx={coord.x} cy={coord.y} r={5.5}   strokeWidth="1.5" style={{ fill: 'var(--brand-solid)', stroke: 'var(--text-inverse)' }} />
+                  <text x={coord.x + 10} y={coord.y + 4}  fontSize="9" fontFamily="Inter, sans-serif" fontWeight="600" style={{ fill: 'var(--text-primary)' }}>
                     {state.name}
                   </text>
                   {progCount > 0 && (
-                    <text x={coord.x + 10} y={coord.y + 14} fill="#9CA3AF" fontSize="7" fontFamily="Inter, sans-serif">
+                    <text x={coord.x + 10} y={coord.y + 14}  fontSize="7" fontFamily="Inter, sans-serif" style={{ fill: 'var(--text-faint)' }}>
                       {progCount} program{progCount !== 1 ? 's' : ''}
                     </text>
                   )}
@@ -83,15 +83,15 @@ export default function GeographicCommand({ states, programDash }: { states: Sta
             {/* Also show states without known coords as dots in a cluster */}
             {states.filter((s) => s.active && !getStateCoord(s.name)).slice(0, 6).map((state, i) => (
               <g key={state.id}>
-                <circle cx={350 + (i % 3) * 40} cy={430 + Math.floor(i / 3) * 20} r={4} fill="#087F5B" opacity={0.5} />
-                <text x={358 + (i % 3) * 40} y={433 + Math.floor(i / 3) * 20} fill="#6B7280" fontSize="7" fontFamily="Inter, sans-serif">
+                <circle cx={350 + (i % 3) * 40} cy={430 + Math.floor(i / 3) * 20} r={4}  opacity={0.5} style={{ fill: 'var(--brand-solid)' }} />
+                <text x={358 + (i % 3) * 40} y={433 + Math.floor(i / 3) * 20}  fontSize="7" fontFamily="Inter, sans-serif" style={{ fill: 'var(--text-muted)' }}>
                   {state.name}
                 </text>
               </g>
             ))}
 
             {/* Abuja primary marker */}
-            <circle cx="370" cy="340" r="12" fill="#087F5B" opacity="0.15" />
+            <circle cx="370" cy="340" r="12"  opacity="0.15" style={{ fill: 'var(--brand-solid)' }} />
           </svg>
         </div>
         <div className="db-geo-map-overlay-left">

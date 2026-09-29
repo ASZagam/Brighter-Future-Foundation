@@ -115,7 +115,7 @@ export default function SettingsContent() {
       <div className="core-kicker">
         <span>FOUNDATION &amp; ADMINISTRATION</span>
         <i>|</i>
-        <span style={{ color: '#6b7584', fontWeight: 600 }}>Platform defaults, support &amp; upload configuration</span>
+        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Platform defaults, support &amp; upload configuration</span>
       </div>
 
       <div className="core-heading">

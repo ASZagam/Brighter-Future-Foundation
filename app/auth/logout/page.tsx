@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { AuthCard } from '@/app/components/auth/AuthCard';
 
 export default function LogoutPage() {
   const [completed, setCompleted] = useState(false);
@@ -15,10 +17,18 @@ export default function LogoutPage() {
   }, []);
 
   return (
-    <div style={{ maxWidth: 620, margin: '4rem auto', padding: 24, background: '#fff', borderRadius: 24, boxShadow: '0 20px 60px rgba(15,23,42,0.08)' }}>
-      <h1>Signing out</h1>
-      <p style={{ color: '#475569' }}>{completed ? 'You have been signed out.' : 'Please wait while we sign you out.'}</p>
-      {completed ? <a href="/auth/login" style={{ color: '#2563eb' }}>Go to sign in</a> : null}
-    </div>
+    <AuthCard lockupSubtitle="Secure platform access">
+      <h1 className="ac-title">Signing out</h1>
+      <p className="ac-lede">
+        {completed ? 'You have been signed out.' : 'Please wait while we sign you out.'}
+      </p>
+      {completed ? (
+        <div className="ac-actions">
+          <Link className="ac-button" href="/auth/login">
+            Go to sign in
+          </Link>
+        </div>
+      ) : null}
+    </AuthCard>
   );
 }

@@ -1,0 +1,253 @@
+/*
+ * Shared presentation for the standalone (unauthenticated) pages: the auth family
+ * and /forbidden. These pages used to hand-roll near-identical inline styles that
+ * had drifted apart (five different widths, two shadows, three button treatments),
+ * so the shell now lives here once and the pages only supply content.
+ */
+
+.ac-card {
+  max-width: 480px;
+  margin: 4rem auto;
+  padding: 2.5rem;
+  background: var(--bg-surface);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.1);
+}
+
+.ac-card--center {
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .ac-card {
+    margin: 1.5rem auto;
+    padding: 1.75rem 1.25rem;
+    border-radius: 20px;
+  }
+}
+
+/* Brand lockup: logo tile + wordmark, shared by every standalone page. */
+.ac-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ac-lockup--center {
+  justify-content: center;
+}
+
+.ac-lockup__mark {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  display: grid;
+  place-items: center;
+}
+
+.ac-lockup__logo {
+  object-fit: contain;
+}
+
+.ac-lockup__text {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+}
+
+.ac-lockup__kicker {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--brand-text);
+  font-weight: 700;
+}
+
+.ac-lockup__sub {
+  display: block;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.ac-eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--brand-text);
+}
+
+.ac-eyebrow--danger {
+  color: var(--danger-text);
+}
+
+.ac-title {
+  font-size: 1.6rem;
+  line-height: 1.25;
+  margin: 0 0 0.4rem;
+}
+
+.ac-lede {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.ac-notice {
+  margin: 18px 0 0;
+  padding: 11px 13px;
+  border: 1px solid var(--brand-soft-border);
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.ac-form {
+  display: grid;
+  gap: 16px;
+  margin: 24px 0 0;
+}
+
+.ac-field {
+  display: grid;
+  gap: 8px;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.ac-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.ac-input:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+  border-color: var(--accent-text);
+}
+
+.ac-input:disabled {
+  background: var(--bg-page);
+  color: var(--text-faint);
+}
+
+.ac-success {
+  margin: 16px 0 0;
+  color: var(--brand-text);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.ac-error {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.ac-button {
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--brand-solid);
+  color: var(--text-inverse);
+  border: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+
+.ac-button:hover:not(:disabled) {
+  background: var(--brand-hover);
+}
+
+.ac-button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.ac-button--secondary {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+.ac-button--secondary:hover:not(:disabled) {
+  background: var(--bg-page);
+}
+
+.ac-button--block {
+  width: 100%;
+}
+
+.ac-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 24px 0 0;
+}
+
+.ac-footer {
+  margin: 24px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  font-size: 0.85rem;
+}
+
+.ac-footer p {
+  margin: 0;
+}
+
+.ac-link {
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+.ac-link:hover {
+  text-decoration: underline;
+}
+
+.ac-body {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.ac-muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.ac-loading {
+  max-width: 480px;
+  margin: 4rem auto;
+  padding: 2.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ac-button {
+    transition: background-color 120ms ease, opacity 120ms ease;
+  }
+}

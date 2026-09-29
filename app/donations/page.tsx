@@ -267,7 +267,7 @@ export default function DonationsPage() {
                     <tr key={donation.id}>
                       <td>
                         <span className="strong">{donation.donor_name}</span>
-                        {donation.donor_email ? <><br /><span style={{ color: '#8993a0', fontSize: 11 }}>{donation.donor_email}</span></> : null}
+                        {donation.donor_email ? <><br /><span style={{ color: 'var(--text-muted)', fontSize: 11 }}>{donation.donor_email}</span></> : null}
                       </td>
                       <td>{donation.campaign || 'General Fund'}</td>
                       <td style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11.5 }}>{donation.reference}</td>

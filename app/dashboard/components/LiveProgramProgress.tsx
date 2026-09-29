@@ -12,16 +12,16 @@ const statusMap: Record<string, { label: string; color: 'green' | 'amber' | 'blu
 };
 
 const colorMap: Record<string, string> = {
-  active: '#087F5B',
-  completed: '#087F5B',
-  planning: '#2563EB',
-  draft: '#6B7280',
-  high: '#E8590C',
-  critical: '#DC2626',
+  active: 'var(--brand-text)',
+  completed: 'var(--brand-text)',
+  planning: 'var(--accent-text)',
+  draft: 'var(--text-muted)',
+  high: 'var(--warning-text)',
+  critical: 'var(--danger-text)',
 };
 
 function getBadgeColor(index: number): string {
-  return ['#087F5B', '#E8590C', '#2563EB', '#7C3AED', '#D97706'][index % 5];
+  return ['var(--brand-text)', 'var(--warning-text)', 'var(--accent-text)', 'var(--violet-text)', 'var(--warning-text)'][index % 5];
 }
 
 function getProgramBadge(prog: Program, index: number): string {
@@ -50,7 +50,7 @@ export default function LiveProgramProgress({ programs }: { programs: Program[] 
     <div className="db-programs-card">
       <div className="db-programs-header">
         <div className="db-programs-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#087F5B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'var(--brand-text)' }}><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
           <div>
             <h2>Live Program Progress &amp; Health</h2>
             <p className="db-programs-subtitle">Active mission deployments across northern and central regional clusters</p>
@@ -63,7 +63,7 @@ export default function LiveProgramProgress({ programs }: { programs: Program[] 
       </div>
 
       {top3.length === 0 ? (
-        <div className="db-programs-empty" style={{ padding: '24px', textAlign: 'center', color: '#9CA3AF', fontSize: '12px' }}>
+        <div className="db-programs-empty" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '12px' }}>
           No active programs found. Create a program to get started.
         </div>
       ) : (
@@ -97,7 +97,7 @@ export default function LiveProgramProgress({ programs }: { programs: Program[] 
                       <span className="db-program-progress-pct">{pct}%</span>
                     </div>
                     <div className="db-program-progress-track">
-                      <div className="db-program-progress-fill" style={{ width: `${pct}%`, background: colorMap[prog.status] || '#087F5B' }} />
+                      <div className="db-program-progress-fill" style={{ width: `${pct}%`, background: colorMap[prog.status] || 'var(--brand-text)' }} />
                     </div>
                     <div className="db-program-expenditure">
                       <span>Fiscal Expenditure:</span>

@@ -50,6 +50,11 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
         if not user:
             raise AuthenticationFailed("Invalid email or password.")
 
+        if user.is_locked:
+            raise AuthenticationFailed(
+                "Account is temporarily locked. Please try again later."
+            )
+
         if not user.email_verified:
             raise AuthenticationFailed("Email address has not been verified.")
 

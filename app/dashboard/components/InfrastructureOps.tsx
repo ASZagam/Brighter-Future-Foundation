@@ -38,9 +38,9 @@ export default function InfrastructureOps({ settings }: { settings: Settings | n
               <span className="db-infra-row-value">{settings.analytics_enabled ? 'Enabled' : 'Disabled'}</span>
             </div>
             {settings.maintenance_mode && (
-              <div className="db-infra-row" style={{ background: '#FEF3C7' }}>
-                <span className="db-infra-row-label" style={{ color: '#92400E', fontWeight: 600 }}>MAINTENANCE MODE</span>
-                <span className="db-infra-row-value" style={{ color: '#92400E' }}>Active</span>
+              <div className="db-infra-row" style={{ background: 'var(--warning-soft)' }}>
+                <span className="db-infra-row-label" style={{ color: 'var(--warning-text)', fontWeight: 600 }}>MAINTENANCE MODE</span>
+                <span className="db-infra-row-value" style={{ color: 'var(--warning-text)' }}>Active</span>
               </div>
             )}
           </>

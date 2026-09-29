@@ -1,37 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import logo from '../../../BFF_logo-removebg-preview.png';
-import type { DashboardUser } from '../hooks/useDashboard';
-
-const coreOps = [
-  { href: '/dashboard', label: 'Dashboard', icon: 'grid' },
-  { href: '/programs', label: 'Programs', icon: 'layers' },
-  { href: '/beneficiaries', label: 'Beneficiaries', icon: 'users' },
-  { href: '/volunteers', label: 'Volunteers', icon: 'heart-handshake' },
-  { href: '/members', label: 'Members', icon: 'user-check' },
-];
-
-const engagement = [
-  { href: '/donations', label: 'Donations & Grants', icon: 'banknote' },
-  { href: '/events', label: 'Events & Field Trips', icon: 'calendar' },
-  { href: '/news', label: 'News & Media', icon: 'newspaper' },
-];
-
-const systemAdmin = [
-  { href: '/core', label: 'Foundation & Admin', icon: 'shield' },
-  { href: '/file-uploads', label: 'File Vault', icon: 'folder-lock' },
-  { href: '/references', label: 'Reference Tables', icon: 'table-2' },
-  { href: '/settings', label: 'Settings', icon: 'settings' },
-  { href: '/admin', label: 'Audit Activity Logs', icon: 'scroll-text' },
-];
+import type { CurrentUser } from '@/lib/auth/roles';
+import { primaryRole, roleLabel } from '@/lib/auth/roles';
+import { navigationFor, workspacesFor } from '@/lib/auth/navigation';
 
 function NavIcon({ name }: { name: string }) {
   const s = { width: 15, height: 15, strokeWidth: 1.8, stroke: 'currentColor', fill: 'none' } as const;
   const icons: Record<string, JSX.Element> = {
     grid: <svg style={s} viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,
+    gauge: <svg style={s} viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>,
     layers: <svg style={s} viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>,
     users: <svg style={s} viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
     'heart-handshake': <svg style={s} viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08 2.5 2.5 0 0 0 3.84 0L12 11"/><path d="M15 10 9.04 7.96a2.17 2.17 0 0 1 0-3.08 2.5 2.5 0 0 1 3.84 0L15 5"/></svg>,
@@ -39,6 +21,7 @@ function NavIcon({ name }: { name: string }) {
     banknote: <svg style={s} viewBox="0 0 24 24"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
     calendar: <svg style={s} viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>,
     newspaper: <svg style={s} viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>,
+    bell: <svg style={s} viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
     'folder-lock': <svg style={s} viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><rect x="10" y="13" width="8" height="5" rx="1"/><circle cx="14" cy="12.5" r="1.5"/></svg>,
     shield: <svg style={s} viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m9 12 2 2 4-4"/></svg>,
     'table-2': <svg style={s} viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>,
@@ -53,19 +36,18 @@ function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-function getRoleBadge(user: DashboardUser | null): string {
-  if (!user) return 'MEMBER';
-  if (user.is_super_admin) return 'SUPER ADMIN';
-  const role = user.role_names?.[0];
-  if (role) return role.replace(/_/g, ' ').toUpperCase();
-  return 'MEMBER';
-}
-
-export default function Sidebar({ user }: { user: DashboardUser | null }) {
+export default function Sidebar({ user }: { user: CurrentUser | null }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const displayName = user?.full_name || user?.username || 'Guest';
   const office = 'Abuja Office';
-  const isActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(`${href}/`));
+  const sections = navigationFor(user);
+  const workspaces = workspacesFor(user).filter(
+    (workspace, index, list) => list.findIndex((w) => w.href === workspace.href) === index
+  );
+  const isActive = (href: string, exact?: boolean) =>
+    exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <aside className="db-sidebar">
@@ -81,36 +63,52 @@ export default function Sidebar({ user }: { user: DashboardUser | null }) {
       <p className="db-sidebar-org">Brighter Future Foundation</p>
 
       <nav className="db-sidebar-nav">
-        <div className="db-sidebar-section">
-          <span className="db-sidebar-section-title">CORE OPS</span>
-          {coreOps.map((item) => (
-            <Link key={item.label} href={item.href} className={`db-sidebar-item${isActive(item.href) ? ' active' : ''}`}>
-              <NavIcon name={item.icon} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
-        <div className="db-sidebar-section">
-          <span className="db-sidebar-section-title">ENGAGEMENT</span>
-          {engagement.map((item) => (
-            <Link key={item.label} href={item.href} className={`db-sidebar-item${isActive(item.href) ? ' active' : ''}`}>
-              <NavIcon name={item.icon} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
-        <div className="db-sidebar-section">
-          <span className="db-sidebar-section-title">SYSTEM & ADMIN</span>
-          {systemAdmin.map((item) => (
-            <Link key={item.label} href={item.href} className={`db-sidebar-item${isActive(item.href) ? ' active' : ''}`}>
-              <NavIcon name={item.icon} />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
+        {sections.map((section) => (
+          <div className="db-sidebar-section" key={section.title}>
+            <span className="db-sidebar-section-title">{section.title.toUpperCase()}</span>
+            {section.items.map((item) => (
+              <Link key={item.href} href={item.href} className={`db-sidebar-item${isActive(item.href, item.exact) ? ' active' : ''}`}>
+                <NavIcon name={item.icon} />
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </div>
+        ))}
       </nav>
 
       <div className="db-sidebar-footer">
+        {workspaces.length > 1 && (
+          <div style={{ position: 'relative', marginBottom: 10 }}>
+            <button
+              type="button"
+              onClick={() => setSwitcherOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={switcherOpen}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '8px 10px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.25)', background: 'rgba(148,163,184,0.08)', color: 'inherit', fontSize: '0.78rem', cursor: 'pointer' }}
+            >
+              <span>Switch workspace</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            {switcherOpen && (
+              <div role="menu" style={{ position: 'absolute', bottom: '110%', left: 0, right: 0, background: 'var(--bg-inverse)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: 10, padding: 4, zIndex: 20 }}>
+                {workspaces.map((workspace) => (
+                  <button
+                    key={workspace.href}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setSwitcherOpen(false);
+                      router.push(workspace.href);
+                    }}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 10px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--text-inverse-muted)', fontSize: '0.8rem', cursor: 'pointer' }}
+                  >
+                    {workspace.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <div className="db-sidebar-user">
           <div className="db-sidebar-avatar">{getInitials(displayName)}</div>
           <div className="db-sidebar-user-info">
@@ -119,7 +117,7 @@ export default function Sidebar({ user }: { user: DashboardUser | null }) {
           </div>
         </div>
         <div className="db-sidebar-user-role">
-          <span className="db-sidebar-role-badge">{getRoleBadge(user)}</span>
+          <span className="db-sidebar-role-badge">{roleLabel(primaryRole(user)).toUpperCase()}</span>
           <Link href="/auth/logout" className="db-sidebar-logout" aria-label="Log out">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
           </Link>

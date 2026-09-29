@@ -1,11 +1,23 @@
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import IsAdmin, IsAuthenticatedOrRole
-from .models import Program, ProgramBeneficiary, ProgramCategory, ProgramDocument, ProgramGallery, ProgramReport, ProgramVolunteerAssignment
+from accounts.permissions import (
+    AuthenticatedReadAdminCoordinatorWrite,
+    IsAdmin,
+    IsAdminOrCoordinator,
+)
+from .models import (
+    Program,
+    ProgramBeneficiary,
+    ProgramCategory,
+    ProgramDocument,
+    ProgramGallery,
+    ProgramReport,
+    ProgramVolunteerAssignment,
+)
 from .serializers import (
     ProgramBeneficiarySerializer,
     ProgramCategorySerializer,
@@ -20,25 +32,16 @@ from .serializers import (
 class ProgramViewSet(viewsets.ModelViewSet):
     queryset = Program.objects.select_related("category", "country", "state", "manager", "coordinator").exclude(is_deleted=True)
     serializer_class = ProgramSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [AuthenticatedReadAdminCoordinatorWrite]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["status", "category", "state", "manager", "coordinator", "priority"]
     search_fields = ["title", "description", "objectives", "category__name", "manager__full_name", "state__name", "lga"]
     ordering_fields = ["created_at", "start_date", "budget", "updated_at", "title"]
 
     def get_permissions(self):
-        if self.action in {"create", "update", "partial_update"}:
-            if self.request.user.is_authenticated and (
-                self.request.user.is_superuser
-                or self.request.user.is_super_admin
-                or self.request.user.is_admin
-                or self.request.user.is_coordinator
-            ):
-                return [permissions.IsAuthenticated()]
-            return [IsAuthenticatedOrRole()]
         if self.action == "destroy":
             return [IsAdmin()]
-        return [IsAuthenticatedOrRole()]
+        return super().get_permissions()
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user, updated_by=self.request.user)
@@ -48,10 +51,19 @@ class ProgramViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         program = self.get_object()
-        if not (request.user.is_superuser or request.user.is_super_admin or request.user.is_admin):
-            return Response({"detail": "You do not have permission to delete programs."}, status=status.HTTP_403_FORBIDDEN)
         program.soft_delete(deleted_by=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["get"], url_path="mine", name="my-programs")
+    def mine(self, request):
+        """Programs where the current user is manager or coordinator."""
+        queryset = self.get_queryset().filter(Q(manager=request.user) | Q(coordinator=request.user))
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="dashboard", name="program-dashboard")
     def dashboard(self, request):
@@ -77,19 +89,19 @@ class ProgramViewSet(viewsets.ModelViewSet):
 class ProgramCategoryViewSet(viewsets.ModelViewSet):
     queryset = ProgramCategory.objects.all()
     serializer_class = ProgramCategorySerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [AuthenticatedReadAdminCoordinatorWrite]
 
 
 class ProgramBeneficiaryViewSet(viewsets.ModelViewSet):
     queryset = ProgramBeneficiary.objects.select_related("program").all()
     serializer_class = ProgramBeneficiarySerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [IsAdminOrCoordinator]
 
 
 class ProgramDocumentViewSet(viewsets.ModelViewSet):
     queryset = ProgramDocument.objects.select_related("program", "uploaded_by").all()
     serializer_class = ProgramDocumentSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [IsAdminOrCoordinator]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["program", "document_type"]
     search_fields = ["title"]
@@ -102,11 +114,22 @@ class ProgramDocumentViewSet(viewsets.ModelViewSet):
 class ProgramGalleryViewSet(viewsets.ModelViewSet):
     queryset = ProgramGallery.objects.select_related("program", "uploaded_by").all()
     serializer_class = ProgramGallerySerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [AuthenticatedReadAdminCoordinatorWrite]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["program", "published"]
     search_fields = ["caption"]
     ordering_fields = ["uploaded_at", "id"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not (
+            user.is_superuser
+            or getattr(user, "is_super_admin", False)
+            or user.has_any_role("admin", "coordinator")
+        ):
+            queryset = queryset.filter(published=True)
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user)
@@ -115,7 +138,7 @@ class ProgramGalleryViewSet(viewsets.ModelViewSet):
 class ProgramReportViewSet(viewsets.ModelViewSet):
     queryset = ProgramReport.objects.select_related("program", "submitted_by").all()
     serializer_class = ProgramReportSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [IsAdminOrCoordinator]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["program"]
     search_fields = ["title", "summary"]
@@ -128,7 +151,26 @@ class ProgramReportViewSet(viewsets.ModelViewSet):
 class ProgramVolunteerAssignmentViewSet(viewsets.ModelViewSet):
     queryset = ProgramVolunteerAssignment.objects.select_related("program", "volunteer").all()
     serializer_class = ProgramVolunteerAssignmentSerializer
-    permission_classes = [IsAuthenticatedOrRole]
+    permission_classes = [IsAdminOrCoordinator]
 
     def perform_create(self, serializer):
         serializer.save(assigned_by=self.request.user)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="me",
+        name="my-program-assignments",
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def me(self, request):
+        volunteer = getattr(request.user, "volunteer_profile", None)
+        if volunteer is None:
+            return Response([], status=status.HTTP_200_OK)
+        queryset = self.get_queryset().filter(volunteer=volunteer)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)

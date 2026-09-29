@@ -57,8 +57,8 @@ export default function KPICards({ programDash, volDash, members, donations }: K
           {wash && <span><span className="db-dot db-dot-wash" /> {wash.count} WASH</span>}
           {health && <span><span className="db-dot db-dot-health" /> {health.count} Health</span>}
           {edu && <span><span className="db-dot db-dot-digital" /> {edu.count} Digital</span>}
-          {otherCount > 0 && <span><span className="db-dot" style={{ background: '#7C3AED' }} /> {otherCount} Other</span>}
-          {!wash && !health && !edu && <span style={{ color: '#9CA3AF' }}>No programs yet</span>}
+          {otherCount > 0 && <span><span className="db-dot" style={{ background: 'var(--accent-solid)' }} /> {otherCount} Other</span>}
+          {!wash && !health && !edu && <span style={{ color: 'var(--text-faint)' }}>No programs yet</span>}
         </div>
       </div>
 
