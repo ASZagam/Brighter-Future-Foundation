@@ -1,8 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import { useId } from 'react';
-import logo from '../../../BFF_logo-removebg-preview.png';
+import { BrandLogo } from '@/app/components/brand';
 import './auth-card.css';
 
 /**
@@ -43,7 +42,7 @@ function AuthLockup({ center, subtitle }: { center: boolean; subtitle: string })
           Decorative: the wordmark immediately beside it already names the
           organisation, so an alt text would just be announced twice.
         */}
-        <Image className="ac-lockup__logo" src={logo} alt="" width={30} height={30} priority />
+        <BrandLogo height={30} priority />
       </span>
       <span className="ac-lockup__text">
         <span className="ac-lockup__kicker">BRIGHTER FUTURE FOUNDATION</span>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import ThemeToggle from '@/app/components/ThemeToggle';
+import { BrandLogo } from '@/app/components/brand';
 
 const NAV = [
   { href: '/', label: 'Home' },
@@ -15,7 +16,14 @@ const NAV = [
   { href: '/transparency', label: 'Transparency' },
 ];
 
-export default function PublicHeader({ orgName }: { orgName?: string }) {
+export default function PublicHeader({
+  orgName,
+  orgLogo,
+}: {
+  orgName?: string;
+  /** Published organisation logo, when an administrator has set one. */
+  orgLogo?: string | null;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { isAuthenticated, loading } = useAuth();
@@ -38,9 +46,8 @@ export default function PublicHeader({ orgName }: { orgName?: string }) {
     <header className="pub-header">
       <div className="pub-header-inner">
         <Link href="/" className="pub-brand" aria-label={`${orgName || 'Home'} home`}>
-          <span className="pub-brand-mark" aria-hidden="true">
-            BFF
-          </span>
+          {/* Decorative: the wordmark beside it already names the organisation. */}
+          <BrandLogo height={34} priority src={orgLogo} />
           <span className="pub-brand-name">{orgName || 'Brighter Future Foundation'}</span>
         </Link>
 

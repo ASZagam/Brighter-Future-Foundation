@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import logo from '../../BFF_logo-removebg-preview.png';
+import { BrandLogo } from '@/app/components/brand';
 import ThemeToggle from './ThemeToggle';
 
 export default function Header() {
@@ -54,7 +53,7 @@ export default function Header() {
     <header className='site-header'>
       <div className='header-inner'>
         <Link href='/' className='brand'>
-          <Image src={logo} alt='BFF logo' width={62} height={62} style={{ borderRadius: 12 }} />
+          <BrandLogo height={40} alt='BFF logo' />
           <div>
             <p className='brand-title'>Brighter Future Foundation</p>
             <p className='brand-tag'>Empower. Engage. Elevate.</p>

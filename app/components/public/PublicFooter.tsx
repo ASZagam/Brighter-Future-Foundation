@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BrandLogo } from '@/app/components/brand';
 import type { PublicOrganization } from '@/lib/publicApi';
 
 const PROGRAM_LINKS = { href: '/programs', label: 'Our Programs' };
@@ -23,6 +24,8 @@ export default function PublicFooter({ org }: { org: PublicOrganization | null }
     <footer className="pub-footer">
       <div className="pub-footer-inner">
         <div className="pub-footer-brand">
+          {/* Decorative: pub-footer-name beside it already names the organisation. */}
+          <BrandLogo height={44} src={org?.logo ?? null} />
           <p className="pub-footer-name">{name}</p>
           {org?.slogan ? <p className="pub-footer-slogan">{org.slogan}</p> : null}
           {org?.mission ? (

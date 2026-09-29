@@ -141,6 +141,7 @@
   --text-secondary: var(--neutral-600);
   --text-muted: var(--neutral-500);
   --text-faint: var(--neutral-400);
+  --brand-plate: #ffffff;
   --text-inverse: #ffffff;
   /* Secondary text sitting on --bg-inverse surfaces (dark panels, navies). */
   --text-inverse-muted: #b6c0cb;
@@ -217,6 +218,7 @@
   --text-secondary: #adbfb4;
   --text-muted: #8b9d93;
   --text-faint: #869890;
+  --brand-plate: #eef3f1;
   --text-inverse: #0b100e;
   --text-inverse-muted: #93a4b1;
 
@@ -909,4 +911,26 @@ h1 {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+/* ==========================================================================
+   Brand mark
+   The logo is dark navy line art, so it always sits on a light plate. That
+   keeps the artwork pixel-identical in both themes: in light mode the plate is
+   invisible against the surface, in dark mode it is the contrast anchor.
+   ========================================================================== */
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: var(--brand-plate);
+  border-radius: var(--radius-sm);
+}
+
+.brand-logo__img {
+  display: block;
+  object-fit: contain;
 }

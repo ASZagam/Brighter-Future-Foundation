@@ -18,6 +18,10 @@
   --pub-border: var(--border-subtle);
   --pub-pending: var(--warning-text);
   --pub-radius: var(--radius-lg);
+  /* Landing-page content column. The rest of the site uses .pub-container at
+     1140px; the landing page is deliberately narrower so cards read as cards
+     rather than as full-bleed panels. */
+  --pub-card-max: 1000px;
   --pub-shadow: var(--shadow-md);
 
   min-height: 100vh;
@@ -64,7 +68,6 @@
 .pub-header { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--pub-border); }
 .pub-header-inner { max-width: 1140px; margin: 0 auto; padding: 0.85rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; }
 .pub-brand { display: flex; align-items: center; gap: .65rem; font-weight: 700; text-decoration: none; color: var(--pub-ink); }
-.pub-brand-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; background: var(--pub-green); color: var(--text-inverse); font-size: .8rem; letter-spacing: .04em; }
 .pub-brand-name { font-size: 1rem; line-height: 1.15; max-width: 12ch; }
 .pub-nav { margin-left: auto; }
 .pub-nav ul { display: flex; gap: 1.4rem; list-style: none; margin: 0; padding: 0; }
@@ -116,38 +119,86 @@
 .pub-lede { margin: 0; color: var(--pub-ink-soft); line-height: 1.65; }
 .pub-section-cta { margin: 2rem 0 0; }
 
+/* The landing page is the only public route that does not use .pub-container,
+   so its sections would otherwise stretch to the full viewport width. Every
+   block of section content shares one centred column, which keeps the heading,
+   the cards and the trailing call to action on the same left edge. */
+.pub-landing .pub-section > .pub-heading,
+.pub-landing .pub-section > .pub-metric-grid,
+.pub-landing .pub-section > .pub-card-grid,
+.pub-landing .pub-section > .pub-program-grid,
+.pub-landing .pub-section > .pub-report-grid,
+.pub-landing .pub-section > .pub-news-grid,
+.pub-landing .pub-section > .pub-transparency,
+.pub-landing .pub-section > .pub-section-cta,
+.pub-landing .pub-section > .pub-empty {
+  width: 100%;
+  max-width: var(--pub-card-max);
+  margin-left: auto;
+  margin-right: auto;
+  /* The sections carry no side padding of their own; without this the cards
+     touch the viewport edge below the --pub-card-max breakpoint. */
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+.pub-landing .pub-section > .pub-metric-grid,
+.pub-landing .pub-section > .pub-card-grid,
+.pub-landing .pub-section > .pub-program-grid,
+.pub-landing .pub-section > .pub-report-grid,
+.pub-landing .pub-section > .pub-news-grid {
+  /* Box sizing so the padding is added outside the card tracks, not eaten
+     out of them. */
+  box-sizing: border-box;
+}
+
+@media (max-width: 599px) {
+  .pub-landing .pub-section > .pub-heading,
+  .pub-landing .pub-section > .pub-metric-grid,
+  .pub-landing .pub-section > .pub-card-grid,
+  .pub-landing .pub-section > .pub-program-grid,
+  .pub-landing .pub-section > .pub-report-grid,
+  .pub-landing .pub-section > .pub-news-grid,
+  .pub-landing .pub-section > .pub-transparency,
+  .pub-landing .pub-section > .pub-section-cta,
+  .pub-landing .pub-section > .pub-empty {
+    padding-left: 1.125rem;
+    padding-right: 1.125rem;
+  }
+}
+
 .pub-page-hero { background: var(--pub-green-soft); border-bottom: 1px solid var(--pub-border); padding: clamp(2.5rem, 5vw, 4rem) 0; }
 .pub-page-hero h1 { margin: 0 0 .75rem; font-size: clamp(1.9rem, 4vw, 2.9rem); line-height: 1.08; letter-spacing: -.02em; }
 .pub-page-lede { margin: 0; max-width: 65ch; color: var(--pub-ink-soft); line-height: 1.65; font-size: 1.05rem; }
 
 /* ---------- metrics ---------- */
 .pub-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; }
-.pub-metric { padding: 1.4rem 1.25rem; background: var(--bg-surface); border: 1px solid var(--pub-border); border-radius: var(--pub-radius); box-shadow: var(--pub-shadow); }
-.pub-metric-value { margin: 0; font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 700; line-height: 1; color: var(--pub-green); letter-spacing: -.02em; }
-.pub-metric-label { margin: .6rem 0 0; font-size: .9rem; font-weight: 600; color: var(--pub-ink-soft); }
-.pub-metric-source { margin: .35rem 0 0; font-size: .75rem; color: var(--text-muted); }
+.pub-metric { padding: 1.05rem 1rem; background: var(--bg-surface); border: 1px solid var(--pub-border); border-radius: var(--pub-radius); box-shadow: var(--pub-shadow); }
+.pub-metric-value { margin: 0; font-size: clamp(1.6rem, 3.2vw, 2.1rem); font-weight: 700; line-height: 1; color: var(--pub-green); letter-spacing: -.02em; }
+.pub-metric-label { margin: .45rem 0 0; font-size: .82rem; font-weight: 600; color: var(--pub-ink-soft); }
+.pub-metric-source { margin: .3rem 0 0; font-size: .72rem; color: var(--text-muted); }
 .pub-metric-pending { border-style: dashed; box-shadow: none; background: var(--bg-inset); }
 .pub-metric-pending .pub-metric-value { color: var(--pub-pending); }
-.pub-metric-pending-note { margin: .35rem 0 0; font-size: .75rem; color: var(--pub-pending); }
+.pub-metric-pending-note { margin: .3rem 0 0; font-size: .72rem; color: var(--pub-pending); }
 
 /* ---------- cards ---------- */
 .pub-card-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1rem; }
-.pub-card { padding: 1.4rem 1.25rem; background: var(--bg-surface); border: 1px solid var(--pub-border); border-top: 4px solid var(--pub-green); border-radius: var(--pub-radius); box-shadow: var(--pub-shadow); }
-.pub-card h3 { margin: 0 0 .5rem; font-size: 1.05rem; }
-.pub-card p { margin: 0; color: var(--pub-ink-soft); line-height: 1.6; font-size: .93rem; }
+.pub-card { padding: 1.05rem 1rem; background: var(--bg-surface); border: 1px solid var(--pub-border); border-top: 4px solid var(--pub-green); border-radius: var(--pub-radius); box-shadow: var(--pub-shadow); }
+.pub-card h3 { margin: 0 0 .4rem; font-size: .97rem; }
+.pub-card p { margin: 0; color: var(--pub-ink-soft); line-height: 1.55; font-size: .875rem; }
 
 .pub-program-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; }
 .pub-program-card { display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--pub-border); border-radius: var(--pub-radius); overflow: hidden; box-shadow: var(--pub-shadow); }
 .pub-program-img, .pub-report-img, .pub-news-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
-.pub-program-body, .pub-report-body, .pub-news-body { padding: 1.25rem; display: flex; flex-direction: column; gap: .6rem; flex: 1; }
-.pub-program-body h3, .pub-report-body h3, .pub-news-body h3 { margin: 0; font-size: 1.1rem; line-height: 1.3; }
+.pub-program-body, .pub-report-body, .pub-news-body { padding: 1rem; display: flex; flex-direction: column; gap: .45rem; flex: 1; }
+.pub-program-body h3, .pub-report-body h3, .pub-news-body h3 { margin: 0; font-size: 1rem; line-height: 1.3; }
 .pub-program-body h3 a { text-decoration: none; }
 .pub-program-body h3 a:hover { color: var(--pub-green); text-decoration: underline; }
-.pub-program-desc, .pub-report-body p, .pub-news-body p { margin: 0; color: var(--pub-ink-soft); line-height: 1.6; font-size: .92rem; }
-.pub-tag { margin: 0; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--pub-green); }
+.pub-program-desc, .pub-report-body p, .pub-news-body p { margin: 0; color: var(--pub-ink-soft); line-height: 1.55; font-size: .875rem; }
+.pub-tag { margin: 0; font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--pub-green); }
 .pub-tag-verified { color: var(--brand-text); }
-.pub-program-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .6rem; margin: auto 0 0; padding-top: .75rem; border-top: 1px solid var(--pub-border); }
-.pub-program-meta dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.pub-program-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .5rem; margin: auto 0 0; padding-top: .6rem; border-top: 1px solid var(--pub-border); }
+.pub-program-meta dt { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
 .pub-program-meta dd { margin: .2rem 0 0; font-size: .9rem; font-weight: 600; }
 .pub-report-meta, .pub-news-date { font-size: .78rem; color: var(--text-muted); }
 
@@ -158,23 +209,23 @@
 /* ---------- figures / transparency ---------- */
 .pub-transparency { display: grid; grid-template-columns: 1.2fr .8fr; gap: 1.5rem; align-items: start; }
 .pub-transparency-figures { display: grid; gap: 1rem; }
-.pub-figure { padding: 1.25rem; background: var(--bg-surface); border: 1px solid var(--pub-border); border-radius: var(--pub-radius); box-shadow: var(--pub-shadow); }
+.pub-figure { padding: 1rem; background: var(--bg-surface); border: 1px solid var(--pub-border); border-radius: var(--pub-radius); box-shadow: var(--pub-shadow); }
 .pub-figure-label { margin: 0 0 .4rem; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
 .pub-figure-value { margin: 0; font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 700; color: var(--pub-green); letter-spacing: -.02em; line-height: 1.1; }
 .pub-figure-value-sm { font-size: 1.1rem; color: var(--pub-ink); }
-.pub-figure-note { margin: .45rem 0 0; font-size: .8rem; color: var(--pub-ink-soft); }
+.pub-figure-note { margin: .4rem 0 0; font-size: .78rem; color: var(--pub-ink-soft); }
 .pub-figure-wide { max-width: 60ch; }
 .pub-figure-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
 
-.pub-allocation { padding: 1.25rem; background: var(--bg-surface); border: 1px solid var(--pub-border); border-radius: var(--pub-radius); box-shadow: var(--pub-shadow); }
-.pub-allocation h3 { margin: 0 0 .9rem; font-size: 1rem; }
-.pub-allocation-list, .pub-allocation-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: .75rem; }
+.pub-allocation { padding: 1rem; background: var(--bg-surface); border: 1px solid var(--pub-border); border-radius: var(--pub-radius); box-shadow: var(--pub-shadow); }
+.pub-allocation h3 { margin: 0 0 .7rem; font-size: .95rem; }
+.pub-allocation-list, .pub-allocation-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
 .pub-allocation-list li, .pub-allocation-bar-head { display: flex; justify-content: space-between; gap: 1rem; font-size: .9rem; }
 .pub-allocation-pct { font-weight: 700; color: var(--pub-green); }
 .pub-allocation-bar { height: 8px; background: var(--pub-surface-alt); border-radius: 999px; overflow: hidden; border: 1px solid var(--pub-border); }
 .pub-allocation-bar span { display: block; height: 100%; background: var(--pub-green); }
 .pub-allocation-bar-head { margin-bottom: .35rem; font-weight: 600; }
-.pub-allocation-note { margin: .35rem 0 0; font-size: .8rem; color: var(--pub-ink-soft); }
+.pub-allocation-note { margin: .3rem 0 0; font-size: .78rem; color: var(--pub-ink-soft); }
 
 /* ---------- newsletter ---------- */
 .pub-newsletter-band { background: var(--pub-navy); color: var(--text-inverse-muted); }
@@ -314,6 +365,10 @@
   --pub-green-dark: #86e0bb;
   --pub-green-soft: #142a20;
   --pub-navy: #050806;
+  /* Recessed stage for .pub-section-soft. It has to sit *below* --bg-surface
+     (#141b18) so the cards on it read as raised; --bg-subtle (#1c2621) is
+     lighter than the cards and sank them into the background. */
+  --pub-surface-alt: #0f1613;
 }
 
 :root[data-theme='dark'] .pub-hero {
@@ -328,3 +383,6 @@
 :root[data-theme='dark'] .pub-footer {
   background: var(--pub-navy);
 }
+
+/* Footer identity block: logo above the name, with consistent rhythm. */
+.pub-footer-brand .brand-logo { margin-bottom: .9rem; }

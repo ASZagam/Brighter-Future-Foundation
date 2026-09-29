@@ -33,19 +33,6 @@
   margin-bottom: 2px;
 }
 
-.db-sidebar-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 2px;
-  border-radius: 6px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  overflow: hidden;
-  flex-shrink: 0;
-}
 
 .db-sidebar-brand-name {
   font-size: 14px;

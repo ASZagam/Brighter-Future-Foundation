@@ -34,7 +34,7 @@ export default async function PublicLayout({ children }: { children: React.React
 
   return (
     <div className="pub-root">
-      <PublicHeader orgName={org?.name || undefined} />
+      <PublicHeader orgName={org?.name || undefined} orgLogo={org?.logo ?? null} />
       <main id="main-content" className="pub-main">
         {children}
       </main>

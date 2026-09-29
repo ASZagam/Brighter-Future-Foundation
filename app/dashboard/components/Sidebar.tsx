@@ -2,9 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import logo from '../../../BFF_logo-removebg-preview.png';
+import { BrandLogo } from '@/app/components/brand';
 import type { CurrentUser } from '@/lib/auth/roles';
 import { primaryRole, roleLabel } from '@/lib/auth/roles';
 import { navigationFor, workspacesFor } from '@/lib/auth/navigation';
@@ -52,9 +51,7 @@ export default function Sidebar({ user }: { user: CurrentUser | null }) {
   return (
     <aside className="db-sidebar">
       <div className="db-sidebar-brand">
-        <div className="db-sidebar-logo">
-          <Image src={logo} alt="Brighter Future Foundation logo" width={28} height={28} style={{ objectFit: 'contain', width: '100%', height: '100%' }} />
-        </div>
+        <BrandLogo height={28} alt="Brighter Future Foundation logo" />
         <div>
           <span className="db-sidebar-brand-name">BFF Ops</span>
           <span className="db-sidebar-brand-sub">OPERATIONS</span>

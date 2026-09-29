@@ -37,12 +37,20 @@ export function PendingMetric({ label }: { label: string }) {
   );
 }
 
+/**
+ * `id` is forwarded to the rendered <h2> so a section can point
+ * `aria-labelledby` at its own heading. Previously each section rendered a
+ * second, visually hidden <h2> purely for that, which put two near-identical
+ * headings for every section into the accessibility tree.
+ */
 export function SectionHeading({
+  id,
   eyebrow,
   title,
   lede,
   align = 'left',
 }: {
+  id?: string;
   eyebrow?: string;
   title: string;
   lede?: string;
@@ -51,7 +59,7 @@ export function SectionHeading({
   return (
     <div className={`pub-heading pub-heading-${align}`}>
       {eyebrow ? <p className="pub-eyebrow">{eyebrow}</p> : null}
-      <h2>{title}</h2>
+      <h2 id={id}>{title}</h2>
       {lede ? <p className="pub-lede">{lede}</p> : null}
     </div>
   );
