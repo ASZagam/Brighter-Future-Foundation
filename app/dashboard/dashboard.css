@@ -2,6 +2,81 @@
    BFF DASHBOARD - Complete Stylesheet
    ============================================= */
 
+.notification-mark-all,
+.notification-mark-one {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--brand-text);
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notification-mark-all:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.notification-list {
+  display: grid;
+  gap: 12px;
+}
+
+.notification-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--bg-page);
+}
+
+.notification-item.is-unread {
+  border-left: 4px solid var(--brand-solid);
+}
+
+.notification-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.notification-item-heading h2 {
+  margin: 8px 0 0;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.notification-mark-one {
+  flex-shrink: 0;
+}
+
+.notification-read-label,
+.notification-item-meta {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.notification-item-message {
+  margin: 14px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.notification-item-meta {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .notification-item-heading {
+    flex-direction: column;
+  }
+}
+
 /* ---- Shell Layout ---- */
 .db-shell {
   display: flex;
@@ -15,7 +90,7 @@
   top: 0;
   left: 0;
   bottom: 0;
-  width: 170px;
+  width: 248px;
   display: flex;
   flex-direction: column;
   background: var(--bg-surface);
@@ -29,8 +104,8 @@
 .db-sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 
@@ -52,10 +127,11 @@
 }
 
 .db-sidebar-org {
-  margin: 4px 0 14px 36px;
-  font-size: 11px;
-  color: var(--text-faint);
-  line-height: 1.3;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 /* Sidebar Navigation */
@@ -63,17 +139,17 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 12px;
 }
 
 .db-sidebar-section {
-  margin-bottom: 6px;
+  margin-bottom: 0;
 }
 
 .db-sidebar-section-title {
   display: block;
-  padding: 6px 8px 4px;
-  font-size: 11px;
+  padding: 6px 8px 8px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.1em;
   color: var(--text-faint);
@@ -83,15 +159,20 @@
 .db-sidebar-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 13px;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
   transition: all 0.15s ease;
   line-height: 1.3;
+}
+
+.db-sidebar-item + .db-sidebar-item {
+  margin-top: 4px;
 }
 
 .db-sidebar-item:hover {
@@ -107,8 +188,8 @@
 
 .db-sidebar-item svg {
   flex-shrink: 0;
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 
 /* Sidebar Footer */
@@ -146,7 +227,7 @@
 }
 
 .db-sidebar-user-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.3;
@@ -156,7 +237,7 @@
 }
 
 .db-sidebar-user-office {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-faint);
   line-height: 1.3;
 }
@@ -174,7 +255,7 @@
   border-radius: 4px;
   background: var(--brand-soft);
   color: var(--brand-text);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
 }
@@ -206,15 +287,45 @@
 /* ---- Main Content Area ---- */
 .db-main {
   flex: 1;
-  margin-left: 170px;
+  margin-left: 248px;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
+.db-shell.sidebar-hidden .db-main {
+  margin-left: 0;
+}
+
+.db-sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.db-sidebar-toggle:hover {
+  background: var(--brand-soft);
+  color: var(--brand-text);
+}
+
 /* ---- Top Header ---- */
 .db-top-header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
   display: flex;
+  align-self: stretch;
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -227,7 +338,7 @@
 .db-top-header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
   flex: 1;
   min-width: 0;
 }
@@ -235,15 +346,23 @@
 .db-breadcrumb {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-left: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  font-size: 14px;
   color: var(--text-faint);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
+.db-breadcrumb-item {
+  display: inline-block;
+}
+
 .db-breadcrumb-sep {
-  color: var(--text-inverse-muted);
+  color: var(--text-faint);
 }
 
 .db-breadcrumb-item.active {
@@ -255,7 +374,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
+  flex: 0 1 320px;
+  min-width: 220px;
   max-width: 320px;
   padding: 5px 10px;
   border: 1px solid var(--border-subtle);
@@ -304,8 +424,30 @@
 .db-top-header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-shrink: 0;
+}
+
+.db-top-header-right .dashboard-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-color: var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+}
+
+.db-top-header-right .dashboard-theme-toggle:hover {
+  background: var(--violet-soft);
+  color: var(--text-primary);
+}
+
+.db-top-header-right .dashboard-theme-toggle .theme-toggle__label {
+  display: none;
 }
 
 .db-header-status {
@@ -346,6 +488,11 @@
 
 .db-bell-btn {
   position: relative;
+}
+
+.db-notification-error {
+  color: var(--danger-text);
+  font-size: 11px;
 }
 
 .db-bell-badge {
@@ -1475,10 +1622,23 @@
 
 @media (max-width: 900px) {
   .db-sidebar {
-    display: none;
+    top: 58px;
+    width: 220px;
+    z-index: 80;
   }
   .db-main {
     margin-left: 0;
+  }
+  .db-shell.sidebar-hidden .db-main {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 1280px) {
+  .db-header-status,
+  .db-search,
+  .db-header-action-btn {
+    display: none;
   }
 }
 
@@ -1490,9 +1650,12 @@
     grid-template-columns: 1fr;
   }
   .db-top-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
+  }
+  .db-top-header-left {
+    flex: 1 1 100%;
   }
   .db-top-header-right {
     flex-wrap: wrap;

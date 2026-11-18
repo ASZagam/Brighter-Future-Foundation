@@ -118,7 +118,7 @@ export default async function ProgramDetailPage({
               <p className="pub-figure-value pub-figure-value-sm">
                 {program.beneficiary_count > 0
                   ? formatCount(program.beneficiary_count)
-                  : 'Not yet recorded'}
+                  : 'Awaiting data'}
               </p>
             </div>
             <div className="pub-figure">

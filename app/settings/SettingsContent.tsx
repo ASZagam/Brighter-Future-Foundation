@@ -102,7 +102,7 @@ export default function SettingsContent() {
       const updated = await apiPatch<SettingsData>(`/core/settings/${settings.id}/`, draft);
       setSettings(updated);
       setDraft(toDraft(updated));
-      setNotice('Settings saved to the Django backend.');
+      setNotice('Settings saved successfully.');
     } catch (err: any) {
       setError(err.message || 'Unable to save settings.');
     } finally {
@@ -222,10 +222,9 @@ export default function SettingsContent() {
           </div>
 
           <div className="core-api-status">
-            <span className="go">● System Good</span>
-            <span>PATCH <b>/api/core/settings/{settings.id}/</b></span>
-            <span className="nl">Live via REST</span>
-            <span>{settings.default_timezone}</span>
+            <span className="go">Organization settings</span>
+            <span>Current time zone</span>
+            <span className="nl">{settings.default_timezone}</span>
           </div>
         </>
       ) : (

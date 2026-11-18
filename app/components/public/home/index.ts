@@ -20,6 +20,7 @@ export {
   buildArticleJsonLd,
   selectFieldReports,
   selectFlagshipPrograms,
+  selectFoundationPhoto,
   selectHeroImage,
   selectHomeMetrics,
   selectMission,

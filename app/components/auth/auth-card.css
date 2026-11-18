@@ -40,10 +40,8 @@
 
 .ac-lockup__mark {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: var(--brand-soft);
+  width: auto;
+  height: auto;
   display: grid;
   place-items: center;
 }

@@ -30,6 +30,16 @@ export type PublicOrganization = {
   mission: string;
   vision: string;
   history: string;
+  about_intro: string;
+  disciplines_intro: string;
+  contact_intro: string;
+  about_disciplines: Array<{
+    id: string;
+    name: string;
+    description: string;
+    display_order: number;
+    is_published: boolean;
+  }>;
   founder_name: string;
   founder_title: string;
   email: string;
@@ -198,7 +208,7 @@ export const absoluteMediaUrl = (path: string | null | undefined): string | null
 };
 
 export const formatCurrency = (value: number | null | undefined): string => {
-  if (value === null || value === undefined) return '—';
+  if (value === null || value === undefined) return 'Awaiting data';
   return new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN',
@@ -207,14 +217,14 @@ export const formatCurrency = (value: number | null | undefined): string => {
 };
 
 export const formatCount = (value: number | null | undefined): string => {
-  if (value === null || value === undefined) return '—';
+  if (value === null || value === undefined) return 'Awaiting data';
   return new Intl.NumberFormat('en-NG').format(value);
 };
 
 export const formatDate = (value: string | null | undefined): string => {
-  if (!value) return '—';
+  if (!value) return 'Awaiting data';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
+  if (Number.isNaN(date.getTime())) return 'Awaiting data';
   return new Intl.DateTimeFormat('en-NG', {
     day: 'numeric',
     month: 'short',

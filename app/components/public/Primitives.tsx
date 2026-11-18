@@ -29,10 +29,9 @@ export function EmptyState({
 
 export function PendingMetric({ label }: { label: string }) {
   return (
-    <div className="pub-metric pub-metric-pending" title="Awaiting published data">
-      <p className="pub-metric-value">—</p>
+    <div className="pub-metric pub-metric-pending" title="Awaiting data">
+      <p className="pub-metric-value">Awaiting data</p>
       <p className="pub-metric-label">{label}</p>
-      <p className="pub-metric-pending-note">Data pending</p>
     </div>
   );
 }

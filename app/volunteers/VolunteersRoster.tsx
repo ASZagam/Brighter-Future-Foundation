@@ -436,7 +436,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
           <span className="member-kpi-label">REGISTERED FIELD<br />VOLUNTEERS</span>
           <strong>{k.total_field_volunteers ?? '—'}</strong>
           <small>Active pool {k.active ?? 0}</small>
-          <span className="member-kpi-foot">{liveStatus === 'loading' ? 'Syncing…' : `${liveCount} live in PostgreSQL`}</span>
+          <span className="member-kpi-foot">{liveStatus === 'loading' ? 'Loading…' : `${liveCount} shown in this view`}</span>
         </div>
         <div className="member-kpi reveal-up">
           <span className="member-kpi-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" strokeWidth="2" style={{ stroke: 'var(--brand-text)' }}><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
@@ -516,7 +516,7 @@ export default function VolunteersRoster({ initialVolunteerId }: { initialVolunt
             <span className="member-roster-check"><input type="checkbox" aria-label="Select all displayed" checked={filtered.length > 0 && filtered.length === checked.size} onChange={() => { if (filtered.every((row) => checked.has(row.id))) setChecked(new Set()); else setChecked(new Set(filtered.map((row) => row.id))); }} /></span>
             <strong>Active Roster</strong>
             <span>(Showing {filtered.length} of {statLabel(totalRecords, activeTab)} records)</span>
-            <span className="member-roster-sort">Listed from PostgreSQL · live</span>
+            <span className="member-roster-sort">Current volunteer records</span>
           </div>
           <div className="vol-table-head">
             <span />
@@ -1005,7 +1005,7 @@ function RegisterVolunteerModal({ skills, saving, onClose, onSubmit }: { skills:
           </div>
           <button type="button" className="member-modal-close" aria-label="Close register form" onClick={onClose}>×</button>
         </div>
-        <p className="member-modal-copy">Create the volunteer directly in the Django roster. Writes are permission-gated (super_admin/admin/coordinator) and audited.</p>
+        <p className="member-modal-copy">Add a volunteer to the roster. Administrative changes are recorded.</p>
         <div className="member-form-grid">
           <label>First name<input required value={form.first_name} onChange={(event) => setForm({ ...form, first_name: event.target.value })} placeholder="Amina" /></label>
           <label>Last name<input required value={form.last_name} onChange={(event) => setForm({ ...form, last_name: event.target.value })} placeholder="Bello" /></label>

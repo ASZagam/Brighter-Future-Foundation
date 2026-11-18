@@ -67,13 +67,9 @@ class EmailService:
             # Get or create verification token
             email_token, _ = EmailVerificationToken.objects.get_or_create(user=user)
 
-            # Build verification link
-            if request:
-                frontend_url = f"{request.scheme}://{request.get_host()}"
-            else:
-                frontend_url = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "http://localhost:3000"
-
-            verification_link = f"{frontend_url}/auth/verify-email?token={email_token.token}"
+            verification_link = (
+                f"{settings.FRONTEND_URL}/auth/verify-email?token={email_token.token}"
+            )
 
             # Prepare email content
             subject = "Verify Your Email Address - BFF"
@@ -114,13 +110,7 @@ class EmailService:
             # Create password reset token
             token = PasswordResetToken.objects.create(user=user)
 
-            # Build reset link
-            if request:
-                frontend_url = f"{request.scheme}://{request.get_host()}"
-            else:
-                frontend_url = settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else "http://localhost:3000"
-
-            reset_link = f"{frontend_url}/auth/reset-password?token={token.token}"
+            reset_link = f"{settings.FRONTEND_URL}/auth/reset-password?token={token.token}"
 
             # Prepare email content
             subject = "Password Reset Request - BFF"

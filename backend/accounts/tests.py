@@ -2,11 +2,17 @@
 Comprehensive unit tests for authentication and authorization
 """
 from django.test import TestCase, Client
+from django.conf import settings
+from django.core import mail
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.test import override_settings
+from rest_framework.test import APIRequestFactory
+from .email_service import EmailService
+from core.models import Member
 
 from .models import Role, UserRole, EmailVerificationToken, PasswordResetToken, AuditLog, Roles
 
@@ -142,6 +148,28 @@ class UserRegistrationAPITestCase(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(User.objects.filter(username=self.user_data['username']).exists())
+        member = Member.objects.get(email=self.user_data['email'])
+        self.assertEqual(member.registration_source, Member.RegistrationSource.SELF_SERVICE)
+        self.assertEqual(member.user.email, self.user_data['email'])
+
+    def test_user_registration_links_existing_admin_member(self):
+        member = Member.objects.create(
+            first_name='New',
+            last_name='User',
+            email=self.user_data['email'],
+            phone=self.user_data['phone'],
+            gender='',
+            state='',
+            lga='',
+            registration_source=Member.RegistrationSource.ADMIN,
+        )
+
+        response = self.client.post(self.registration_url, self.user_data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        member.refresh_from_db()
+        self.assertEqual(member.registration_source, Member.RegistrationSource.ADMIN)
+        self.assertEqual(member.user.email, self.user_data['email'])
 
     def test_user_registration_password_mismatch(self):
         """Test registration with mismatched passwords"""
@@ -152,6 +180,15 @@ class UserRegistrationAPITestCase(APITestCase):
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_user_registration_rejects_weak_password(self):
+        self.user_data['password'] = 'weak'
+        self.user_data['password2'] = 'weak'
+
+        response = self.client.post(self.registration_url, self.user_data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password', response.data)
 
     def test_user_registration_duplicate_email(self):
         """Test registration with duplicate email"""
@@ -241,6 +278,33 @@ class JWTAuthenticationAPITestCase(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_jwt_login_locks_account_after_failed_attempts(self):
+        for _ in range(settings.LOGIN_MAX_FAILED_ATTEMPTS):
+            response = self.client.post(
+                self.login_url,
+                {'username': self.user.username, 'password': 'WrongPassword'},
+                format='json',
+            )
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.failed_login_attempts, settings.LOGIN_MAX_FAILED_ATTEMPTS)
+        self.assertTrue(self.user.is_locked)
+
+        response = self.client.post(self.login_url, self.user_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('temporarily locked', response.data['detail'])
+
+    def test_jwt_login_success_resets_failed_attempts(self):
+        self.user.failed_login_attempts = 2
+        self.user.save(update_fields=['failed_login_attempts'])
+
+        response = self.client.post(self.login_url, self.user_data, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.failed_login_attempts, 0)
+
     def test_jwt_access_protected_endpoint(self):
         """Test accessing protected endpoint with JWT token"""
         # Get token
@@ -310,6 +374,38 @@ class PasswordManagementAPITestCase(APITestCase):
         response = self.client.post(change_password_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_change_password_rejects_weak_password(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse('change_password'),
+            {
+                'old_password': 'OldPass123!@#',
+                'new_password': 'weak',
+                'new_password_confirm': 'weak',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('new_password', response.data)
+
+    def test_password_reset_rejects_weak_password(self):
+        reset_token = PasswordResetToken.objects.create(user=self.user)
+
+        response = self.client.post(
+            reverse('reset_password'),
+            {
+                'token': reset_token.token,
+                'new_password': 'weak',
+                'new_password_confirm': 'weak',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('new_password', response.data)
+
     def test_request_password_reset(self):
         """Test requesting password reset"""
         request_reset_url = reverse('request_password_reset')
@@ -355,6 +451,17 @@ class EmailVerificationAPITestCase(APITestCase):
         self.assertTrue(self.user.email_verified)
         self.assertEqual(self.user.status, 'active')
 
+    def test_verify_email_is_idempotent(self):
+        verify_url = reverse('verify_email')
+        data = {'token': self.email_token.token}
+
+        first_response = self.client.post(verify_url, data, format='json')
+        second_response = self.client.post(verify_url, data, format='json')
+
+        self.assertEqual(first_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(second_response.data['detail'], 'Email verified successfully. You can now sign in.')
+
     def test_verify_email_invalid_token(self):
         """Test email verification with invalid token"""
         verify_url = reverse('verify_email')
@@ -362,6 +469,21 @@ class EmailVerificationAPITestCase(APITestCase):
         data = {'token': 'invalid_token'}
         response = self.client.post(verify_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(
+        FRONTEND_URL='http://localhost:3001',
+        EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+    )
+    def test_verification_email_uses_frontend_url(self):
+        request = APIRequestFactory().post(
+            '/auth/register/',
+            HTTP_HOST='127.0.0.1:8000',
+        )
+
+        self.assertTrue(EmailService.send_verification_email(self.user, request))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('http://localhost:3001/auth/verify-email?', mail.outbox[0].body)
+        self.assertNotIn('127.0.0.1:8000', mail.outbox[0].body)
 
 
 class AuditLogTestCase(TestCase):

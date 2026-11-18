@@ -13,6 +13,7 @@ from .models import (
     ProgramDocument,
     ProgramGallery,
     ProgramReport,
+    ProgramStaffAssignment,
     ProgramVolunteerAssignment,
     Settings,
     State,
@@ -223,3 +224,11 @@ class ProgramVolunteerAssignmentAdmin(admin.ModelAdmin):
     list_display = ("program", "volunteer", "assigned_by", "assigned_at", "is_active")
     search_fields = ("program__title", "volunteer__member__first_name", "volunteer__member__last_name")
     list_filter = ("is_active", "assigned_at")
+
+
+@admin.register(ProgramStaffAssignment)
+class ProgramStaffAssignmentAdmin(admin.ModelAdmin):
+    list_display = ("user", "program", "role_in_program", "is_active", "assigned_at")
+    list_filter = ("role_in_program", "is_active")
+    search_fields = ("user__email", "user__full_name", "program__title")
+    raw_id_fields = ("user", "program", "assigned_by")

@@ -5,7 +5,7 @@ import type { ResolvedMetricSlot } from './selectors';
 /**
  * The four headline figures.
  *
- * Any slot without a published, available metric renders the "Data pending"
+ * Any slot without a published, available metric renders the "Awaiting data"
  * tile — the section never fills a gap with an estimate.
  */
 export function ImpactMetrics({ slots }: { slots: ResolvedMetricSlot[] }) {
@@ -20,7 +20,7 @@ export function ImpactMetrics({ slots }: { slots: ResolvedMetricSlot[] }) {
 
       <div className="pub-metric-grid">
         {slots.map(({ label, metric }) =>
-          metric && metric.available ? (
+          metric && metric.available && metric.value !== null ? (
             <div className="pub-metric" key={label}>
               <p className="pub-metric-value">{formatCount(metric.value)}</p>
               <p className="pub-metric-label">{label}</p>

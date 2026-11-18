@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Roboto_Slab } from 'next/font/google';
 import './globals.css';
 import './public-site.css';
 import LayoutShell from './LayoutShell';
@@ -22,6 +22,12 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+const robotoSlab = Roboto_Slab({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-roboto-slab',
+});
+
 /**
  * Resolves the theme before the first paint.
  *
@@ -36,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     // suppressHydrationWarning: the script above mutates <html> before React
     // hydrates, so the server and client markup intentionally differ here.
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} ${robotoSlab.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>

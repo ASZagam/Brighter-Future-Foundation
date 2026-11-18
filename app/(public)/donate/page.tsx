@@ -49,7 +49,7 @@ export default async function DonatePage() {
                 <p>
                   Funds raised to date:{' '}
                   <strong>
-                    {transparency.funds_raised ? formatCurrency(transparency.funds_raised) : '—'}
+                    {formatCurrency(transparency.funds_raised)}
                   </strong>
                 </p>
                 <p>

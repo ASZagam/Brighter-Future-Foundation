@@ -47,7 +47,7 @@ export default function PublicHeader({
       <div className="pub-header-inner">
         <Link href="/" className="pub-brand" aria-label={`${orgName || 'Home'} home`}>
           {/* Decorative: the wordmark beside it already names the organisation. */}
-          <BrandLogo height={34} priority src={orgLogo} />
+          <BrandLogo height={52} priority src={orgLogo} />
           <span className="pub-brand-name">{orgName || 'Brighter Future Foundation'}</span>
         </Link>
 

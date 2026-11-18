@@ -23,6 +23,7 @@ import {
   ProgramsSection,
   selectFieldReports,
   selectFlagshipPrograms,
+  selectFoundationPhoto,
   selectHeroImage,
   selectHomeMetrics,
   selectMission,
@@ -79,7 +80,7 @@ export default async function LandingPage() {
         slogan={org?.slogan || null}
         mission={selectMission(org)}
         heroImage={selectHeroImage(org, gallery)}
-        impact={impact}
+        mobileHeroImage={selectFoundationPhoto()}
       />
 
       <ImpactMetrics slots={selectHomeMetrics(impact?.metrics ?? [])} />

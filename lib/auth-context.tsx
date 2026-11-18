@@ -78,11 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
+      const loginIdentifier = identifier.trim();
+      const credentials = loginIdentifier.includes('@')
+        ? { email: loginIdentifier, password }
+        : { username: loginIdentifier, password };
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ username: identifier, password }),
+        body: JSON.stringify(credentials),
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

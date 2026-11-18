@@ -24,6 +24,7 @@ __pycache__/
 # ======================
 node_modules/
 .next/
+.next-dev/
 out/
 dist/
 
@@ -67,6 +68,7 @@ tsconfig.tsbuildinfo
 /dash.png
 /Html → Body.png
 /Screenshot from 2026-09-03 18-21-32.png
+/Screenshot from 2026-11-17 15-34-50.png
 /landing.png
 
 # user-uploaded runtime media (test uploads, seeded documents, avatars)

@@ -1,5 +1,7 @@
 from rest_framework import viewsets, permissions, status, generics
+from itertools import islice
 
+from django.contrib.auth import get_user_model
 from accounts.permissions import (
     AuthenticatedReadAdminCoordinatorWrite,
     CanManageMember,
@@ -12,6 +14,7 @@ from accounts.services import AuditService
 from accounts.models import AuditLog as AccountAuditLog
 
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db.models import Count, Sum
@@ -23,10 +26,15 @@ from .serializers import (
     CountrySerializer,
     StateSerializer,
     NotificationSerializer,
+    BroadcastAudienceSerializer,
+    NotificationBroadcastSerializer,
     AuditLogSerializer,
     FileUploadSerializer,
     OrganizationProfileSerializer,
+    OrganizationAboutDraftSerializer,
     MemberSerializer,
+    MemberSelfSerializer,
+    MemberSelfUpdateSerializer,
     VolunteerSerializer,
     VolunteerSkillSerializer,
     VolunteerHourLogSerializer,
@@ -115,6 +123,7 @@ class MemberViewSet(viewsets.ModelViewSet):
         "membership_type",
         "status",
         "state",
+        "registration_source",
     ]
 
     ordering_fields = [
@@ -123,33 +132,66 @@ class MemberViewSet(viewsets.ModelViewSet):
         "first_name",
     ]
 
-    def perform_create(self, serializer):
-        member = serializer.save()
-        AuditService.log(
-            user=self.request.user,
-            action="member_created",
-            request=self.request,
-            details={"member_id": member.member_id, "full_name": member.full_name},
+    def notify_linked_member(self, member, title, message):
+        if not member.user_id or member.user_id == self.request.user.pk:
+            return
+        Notification.objects.create(
+            user_id=member.user_id,
+            title=title,
+            message=message,
+            notification_type=Notification.NotificationType.INFO,
+            category="Membership",
+            metadata={"member_id": member.member_id},
         )
 
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            member = serializer.save(
+                registration_source=Member.RegistrationSource.ADMIN,
+                created_by=self.request.user,
+            )
+            self.notify_linked_member(
+                member,
+                "Membership record created",
+                "Foundation staff created your membership record.",
+            )
+            AuditService.log(
+                user=self.request.user,
+                action="member_created",
+                request=self.request,
+                details={"member_id": member.member_id, "full_name": member.full_name},
+            )
+
     def perform_update(self, serializer):
-        member = serializer.save()
-        AuditService.log(
-            user=self.request.user,
-            action="member_updated",
-            request=self.request,
-            details={"member_id": member.member_id},
-        )
+        with transaction.atomic():
+            member = serializer.save()
+            self.notify_linked_member(
+                member,
+                "Membership record updated",
+                "Foundation staff updated your membership information.",
+            )
+            AuditService.log(
+                user=self.request.user,
+                action="member_updated",
+                request=self.request,
+                details={"member_id": member.member_id},
+            )
 
     def perform_destroy(self, instance):
         member_ref = instance.member_id
-        instance.delete()
-        AuditService.log(
-            user=self.request.user,
-            action="member_deleted",
-            request=self.request,
-            details={"member_id": member_ref},
-        )
+        with transaction.atomic():
+            self.notify_linked_member(
+                instance,
+                "Membership record removed",
+                "Foundation staff removed your membership record.",
+            )
+            instance.delete()
+            AuditService.log(
+                user=self.request.user,
+                action="member_deleted",
+                request=self.request,
+                details={"member_id": member_ref},
+            )
 
     @action(detail=False, methods=["get"], url_path="stats", name="member-stats")
     def stats(self, request):
@@ -161,6 +203,12 @@ class MemberViewSet(viewsets.ModelViewSet):
         inactive = base.filter(status=MembershipStatus.INACTIVE).count()
         archived = base.filter(status=MembershipStatus.ARCHIVED).count()
         beneficiaries = base.filter(membership_type=MembershipType.BENEFICIARY).count()
+        self_registered = base.filter(
+            registration_source=Member.RegistrationSource.SELF_SERVICE
+        ).count()
+        admin_added = base.filter(
+            registration_source=Member.RegistrationSource.ADMIN
+        ).count()
         states = list(
             base.exclude(state="").values_list("state", flat=True).distinct().order_by("state")
         )
@@ -176,6 +224,8 @@ class MemberViewSet(viewsets.ModelViewSet):
                     "archived": archived,
                     "beneficiaries": beneficiaries,
                     "states_covered": len(states),
+                    "self_registered": self_registered,
+                    "admin_added": admin_added,
                 },
                 "tabs": {
                     "all": total,
@@ -195,7 +245,7 @@ class MemberViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        methods=["get"],
+        methods=["get", "patch"],
         url_path="me",
         name="member-me",
         permission_classes=[IsAuthenticated],
@@ -208,7 +258,20 @@ class MemberViewSet(viewsets.ModelViewSet):
                 {"detail": "No member profile is linked to this account."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        return Response(MemberSerializer(member).data)
+        if request.method == "PATCH":
+            serializer = MemberSelfUpdateSerializer(
+                member,
+                data=request.data,
+                partial=True,
+            )
+            serializer.is_valid(raise_exception=True)
+            member = serializer.save()
+            request.user.first_name = member.first_name
+            request.user.last_name = member.last_name
+            request.user.full_name = member.full_name
+            request.user.phone = member.phone
+            request.user.save(update_fields=["first_name", "last_name", "full_name", "phone"])
+        return Response(MemberSelfSerializer(member).data)
 
     @action(detail=False, methods=["get"], url_path="export", name="member-export")
     def export(self, request):
@@ -257,14 +320,20 @@ class MemberViewSet(viewsets.ModelViewSet):
                 {"error": f"status must be one of: {', '.join(sorted(valid))}."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        member.status = new_status
-        member.save(update_fields=["status", "updated_at"])
-        AuditService.log(
-            user=request.user,
-            action="member_status_changed",
-            request=request,
-            details={"member_id": member.member_id, "status": new_status},
-        )
+        with transaction.atomic():
+            member.status = new_status
+            member.save(update_fields=["status", "updated_at"])
+            self.notify_linked_member(
+                member,
+                "Membership status updated",
+                f"Foundation staff changed your membership status to {member.get_status_display()}.",
+            )
+            AuditService.log(
+                user=request.user,
+                action="member_status_changed",
+                request=request,
+                details={"member_id": member.member_id, "status": new_status},
+            )
         return Response({"status": new_status, "member": MemberSerializer(member).data})
 
 
@@ -787,6 +856,173 @@ class OrganizationProfileView(
         )
         return obj
 
+
+class OrganizationAboutView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get_profile(self):
+        profile, _ = OrganizationProfile.objects.get_or_create(
+            name="Brighter Future Foundation",
+            defaults={"is_active": False},
+        )
+        return profile
+
+    @staticmethod
+    def published_content(profile):
+        return {
+            "name": profile.name,
+            "slogan": profile.slogan,
+            "about_intro": profile.about_intro,
+            "disciplines_intro": profile.disciplines_intro,
+            "mission": profile.mission,
+            "vision": profile.vision,
+            "history": profile.history,
+            "founder_name": profile.founder_name,
+            "founder_title": profile.founder_title,
+            "email": profile.email,
+            "phone": profile.phone,
+            "address": profile.address,
+            "contact_intro": profile.contact_intro,
+            "disciplines": profile.about_disciplines,
+            "hero_banner": profile.hero_banner.url if profile.hero_banner else "",
+        }
+
+    @staticmethod
+    def banner_url(request, field):
+        return request.build_absolute_uri(field.url) if field else ""
+
+    def get(self, request):
+        profile = self.get_profile()
+        published = self.published_content(profile)
+        draft = profile.about_draft or published
+        return Response({
+            "published": published,
+            "draft": draft,
+            "has_draft": bool(profile.about_draft),
+            "published_banner_url": self.banner_url(request, profile.hero_banner),
+            "draft_banner_url": self.banner_url(request, profile.about_draft_banner),
+            "updated_at": profile.updated_at,
+        })
+
+    def patch(self, request):
+        serializer = OrganizationAboutDraftSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            profile = self.get_profile()
+            profile.about_draft = serializer.validated_data
+            profile.save(update_fields=["about_draft", "updated_at"])
+            AuditService.log(
+                user=request.user,
+                action="organization_about_draft_saved",
+                request=request,
+                details={"organization": profile.name},
+            )
+        return Response({
+            "published": self.published_content(profile),
+            "draft": profile.about_draft,
+            "has_draft": True,
+            "published_banner_url": self.banner_url(request, profile.hero_banner),
+            "draft_banner_url": self.banner_url(request, profile.about_draft_banner),
+            "updated_at": profile.updated_at,
+        })
+
+
+class OrganizationAboutBannerView(APIView):
+    permission_classes = [IsAdmin]
+
+    def post(self, request):
+        from .serializers import OrganizationAboutBannerSerializer
+
+        serializer = OrganizationAboutBannerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            profile, _ = OrganizationProfile.objects.get_or_create(
+                name="Brighter Future Foundation",
+                defaults={"is_active": False},
+            )
+            profile.about_draft_banner = serializer.validated_data["hero_banner"]
+            profile.save(update_fields=["about_draft_banner", "updated_at"])
+            AuditService.log(
+                user=request.user,
+                action="organization_about_banner_staged",
+                request=request,
+                details={"organization": profile.name},
+            )
+        return Response({
+            "draft_banner_url": request.build_absolute_uri(profile.about_draft_banner.url),
+        }, status=status.HTTP_201_CREATED)
+
+    def delete(self, request):
+        with transaction.atomic():
+            profile, _ = OrganizationProfile.objects.get_or_create(
+                name="Brighter Future Foundation",
+                defaults={"is_active": False},
+            )
+            if profile.about_draft_banner:
+                profile.about_draft_banner.delete(save=False)
+                profile.about_draft_banner = None
+                profile.save(update_fields=["about_draft_banner", "updated_at"])
+            AuditService.log(
+                user=request.user,
+                action="organization_about_banner_draft_removed",
+                request=request,
+                details={"organization": profile.name},
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PublishOrganizationAboutView(OrganizationAboutView):
+    def post(self, request):
+        with transaction.atomic():
+            profile = self.get_profile()
+            if not profile.about_draft:
+                raise ValidationError({"detail": "Save a draft before publishing."})
+            serializer = OrganizationAboutDraftSerializer(data=profile.about_draft)
+            serializer.is_valid(raise_exception=True)
+            draft = serializer.validated_data
+            profile.name = draft["name"]
+            profile.slogan = draft["slogan"]
+            profile.about_intro = draft["about_intro"]
+            profile.disciplines_intro = draft["disciplines_intro"]
+            profile.mission = draft["mission"]
+            profile.vision = draft["vision"]
+            profile.history = draft["history"]
+            profile.founder_name = draft["founder_name"]
+            profile.founder_title = draft["founder_title"]
+            profile.email = draft["email"]
+            profile.phone = draft["phone"]
+            profile.address = draft["address"]
+            profile.contact_intro = draft["contact_intro"]
+            profile.about_disciplines = draft["disciplines"]
+            if profile.about_draft_banner:
+                profile.hero_banner.name = profile.about_draft_banner.name
+                profile.about_draft_banner = None
+            profile.is_active = True
+            profile.save(update_fields=[
+                "name", "slogan", "about_intro", "disciplines_intro", "mission",
+                "vision", "history", "founder_name", "founder_title", "email",
+                "phone", "address", "contact_intro", "about_disciplines",
+                "hero_banner", "about_draft_banner", "is_active", "updated_at",
+            ])
+            OrganizationProfile.objects.exclude(pk=profile.pk).filter(is_active=True).update(
+                is_active=False
+            )
+            AuditService.log(
+                user=request.user,
+                action="organization_about_published",
+                request=request,
+                details={"organization": profile.name},
+            )
+        published = self.published_content(profile)
+        return Response({
+            "published": published,
+            "draft": profile.about_draft,
+            "has_draft": True,
+            "published_banner_url": self.banner_url(request, profile.hero_banner),
+            "draft_banner_url": "",
+            "updated_at": profile.updated_at,
+        })
+
 class SettingsViewSet(viewsets.ModelViewSet):
     queryset = Settings.objects.select_related('organization').all()
     serializer_class = SettingsSerializer
@@ -849,6 +1085,73 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=['get'], url_path='unread-count')
+    def unread_count(self, request):
+        return Response({'count': self.get_queryset().filter(read=False).count()})
+
+    def _broadcast_recipients(self, audience):
+        User = get_user_model()
+        recipients = User.objects.filter(is_active=True, status='active')
+        if audience != 'all':
+            recipients = recipients.filter(roles__name=audience, roles__is_active=True)
+        return recipients.distinct()
+
+    @action(detail=False, methods=['get'], url_path='broadcast-preview', permission_classes=[IsAdmin])
+    def broadcast_preview(self, request):
+        serializer = BroadcastAudienceSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        audience = serializer.validated_data['audience']
+        return Response({
+            'audience': audience,
+            'recipient_count': self._broadcast_recipients(audience).count(),
+        })
+
+    @action(detail=False, methods=['post'], url_path='broadcast', permission_classes=[IsAdmin])
+    def broadcast(self, request):
+        serializer = NotificationBroadcastSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        audience = serializer.validated_data['audience']
+        recipients = self._broadcast_recipients(audience)
+        recipient_ids = recipients.values_list('pk', flat=True).iterator(chunk_size=1000)
+        recipient_count = 0
+
+        with transaction.atomic():
+            while recipient_batch := list(islice(recipient_ids, 1000)):
+                created = Notification.objects.bulk_create(
+                    [
+                        Notification(
+                            user_id=user_id,
+                            title=serializer.validated_data['title'],
+                            message=serializer.validated_data['message'],
+                            notification_type=Notification.NotificationType.INFO,
+                            category='Broadcast',
+                            metadata={'broadcast_audience': audience},
+                        )
+                        for user_id in recipient_batch
+                    ],
+                    batch_size=1000,
+                )
+                recipient_count += len(created)
+
+            if not recipient_count:
+                raise ValidationError({'audience': 'There are no active users in this audience.'})
+
+            AuditService.log(
+                user=request.user,
+                action='notification_broadcast_sent',
+                request=request,
+                details={
+                    'audience': audience,
+                    'recipient_count': recipient_count,
+                    'title': serializer.validated_data['title'],
+                },
+            )
+
+        return Response(
+            {'audience': audience, 'recipient_count': recipient_count},
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):

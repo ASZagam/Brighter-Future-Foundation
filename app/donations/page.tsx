@@ -297,10 +297,8 @@ export default function DonationsPage() {
         </section>
 
         <div className="ops-status-strip">
-          <span className="go">● Ledger live</span>
-          <span>GET <b>/api/core/donations/</b> · totals from <b>/donations/stats/</b></span>
-          <span className="nl">Live via REST</span>
-          <span>Page size {PAGE_SIZE}</span>
+          <span className="go">{count} donation records</span>
+          <span>Page {page} of {totalPages}</span>
         </div>
       </main>
 

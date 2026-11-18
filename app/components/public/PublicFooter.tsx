@@ -25,7 +25,9 @@ export default function PublicFooter({ org }: { org: PublicOrganization | null }
       <div className="pub-footer-inner">
         <div className="pub-footer-brand">
           {/* Decorative: pub-footer-name beside it already names the organisation. */}
-          <BrandLogo height={44} src={org?.logo ?? null} />
+          <span className="pub-footer-logo">
+            <BrandLogo height={56} src={org?.logo ?? null} />
+          </span>
           <p className="pub-footer-name">{name}</p>
           {org?.slogan ? <p className="pub-footer-slogan">{org.slogan}</p> : null}
           {org?.mission ? (

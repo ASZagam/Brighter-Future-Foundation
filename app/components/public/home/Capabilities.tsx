@@ -21,8 +21,13 @@ export function Capabilities({ capabilities }: { capabilities: PublicCapability[
             <li
               className="pub-card"
               key={cap.id}
-              style={cap.color ? { borderTopColor: cap.color } : undefined}
             >
+              <span className="pub-capability-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M8 12h8M12 8v8" />
+                </svg>
+              </span>
               <h3>{cap.name}</h3>
               <p>{cap.description}</p>
             </li>

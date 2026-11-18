@@ -13,26 +13,26 @@ export const metadata: Metadata = {
 };
 
 const HEADLINE = [
-  'Programs on record',
-  'Programs active',
+  { label: 'Programs', source: 'Programs on record' },
   'People reached',
-  'Active volunteers',
-  'Active members',
-  'States reached',
-  'Countries',
+  { label: 'Volunteers', source: 'Active volunteers' },
+  { label: 'Members', source: 'Active members' },
+  { label: 'Locations', source: 'States reached' },
   'Funds raised',
   'Program budget committed',
   'Expenditure recorded',
 ];
 
-const NOT_YET = 'Awaiting published data';
+const NOT_YET = 'Awaiting data';
 
 export default async function ImpactPage() {
   const impact = await getImpactSummary();
   const metrics = impact?.metrics ?? [];
-  const headline = HEADLINE.map((label) => metrics.find((m) => m.label === label)).filter(
-    (m): m is NonNullable<typeof m> => Boolean(m)
-  );
+  const headline = HEADLINE.map((item) => {
+    const label = typeof item === 'string' ? item : item.label;
+    const source = typeof item === 'string' ? item : item.source;
+    return { label, metric: metrics.find((m) => m.label === source) };
+  });
   const coverage = impact?.transparency.public_reporting_coverage;
 
   return (
@@ -52,28 +52,21 @@ export default async function ImpactPage() {
       <section className="pub-section">
         <div className="pub-container">
           <SectionHeading eyebrow="Headline figures" title="At a glance" />
-          {headline.length > 0 ? (
-            <div className="pub-metric-grid">
-              {headline.map((m) =>
-                m.available ? (
-                  <div className="pub-metric" key={m.label}>
-                    <p className="pub-metric-value">
-                      {m.unit === 'NGN' ? formatCurrency(m.value) : formatCount(m.value)}
-                    </p>
-                    <p className="pub-metric-label">{m.label}</p>
-                    {m.source ? <p className="pub-metric-source">Source: {m.source}</p> : null}
-                  </div>
-                ) : (
-                  <PendingMetric key={m.label} label={m.label} />
-                )
-              )}
-            </div>
-          ) : (
-            <EmptyState
-              title="Impact data temporarily unavailable"
-              detail="The records service did not respond. Figures will return automatically once it is reachable."
-            />
-          )}
+          <div className="pub-metric-grid pub-impact-grid">
+            {headline.map(({ label, metric }) =>
+              metric?.available && metric.value !== null ? (
+                <div className="pub-metric" key={label}>
+                  <p className="pub-metric-value">
+                    {metric.unit === 'NGN' ? formatCurrency(metric.value) : formatCount(metric.value)}
+                  </p>
+                  <p className="pub-metric-label">{label}</p>
+                  {metric.source ? <p className="pub-metric-source">Source: {metric.source}</p> : null}
+                </div>
+              ) : (
+                <PendingMetric key={label} label={label} />
+              )
+            )}
+          </div>
         </div>
       </section>
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import './dashboard.css';
 import { useDashboard } from './hooks/useDashboard';
 import Sidebar from './components/Sidebar';
@@ -14,6 +15,7 @@ import InfrastructureOps from './components/InfrastructureOps';
 import GeographicCommand from './components/GeographicCommand';
 
 export default function DashboardPage() {
+  const [sidebarHidden, setSidebarHidden] = useState(false);
   const {
     user,
     stats,
@@ -43,10 +45,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="db-shell">
-      <Sidebar user={user} />
+    <div className={`db-shell${sidebarHidden ? ' sidebar-hidden' : ''}`}>
+      <Sidebar user={user} hidden={sidebarHidden} />
       <div className="db-main">
-        <TopHeader notificationCount={stats?.pending_notifications ?? notifications.filter((n) => !n.read).length} />
+        <TopHeader notificationCount={stats?.pending_notifications ?? notifications.filter((n) => !n.read).length} onToggleSidebar={() => setSidebarHidden((hidden) => !hidden)} />
         <div className="db-content">
           <SystemStatusStrip latency={latency} />
           {loading ? (

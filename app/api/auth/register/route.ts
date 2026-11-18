@@ -1,16 +1,43 @@
 import { NextResponse } from 'next/server';
 import { backendProxyUrl } from '../../backendClient';
 
+function errorMessage(payload: unknown): string {
+  if (typeof payload === 'string') return payload;
+  if (!payload || typeof payload !== 'object') return 'Registration could not be completed.';
+
+  const errors = payload as Record<string, unknown>;
+  const detail = errors.detail ?? errors.error;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map(String).join(' ');
+
+  const labels: Record<string, string> = {
+    email: 'Email',
+    password: 'Password',
+    password2: 'Password confirmation',
+    full_name: 'Full name',
+    phone: 'Phone',
+    non_field_errors: 'Registration',
+  };
+  const messages = Object.entries(errors).flatMap(([field, value]) => {
+    const items = Array.isArray(value) ? value : [value];
+    return items.filter((item) => typeof item === 'string').map((item) => `${labels[field] ?? field}: ${item}`);
+  });
+  return messages.join(' ') || 'Registration could not be completed. Please try again.';
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { fullName, email, phone, password } = body;
+    const { fullName, email, phone, password, password2 } = body;
 
-    if (!email || !password) {
+    if (!email || !password || !password2) {
       return NextResponse.json(
-        { error: 'Email and password are required.' },
+        { error: 'Email, password, and password confirmation are required.' },
         { status: 400 }
       );
+    }
+    if (password !== password2) {
+      return NextResponse.json({ error: 'Passwords do not match.' }, { status: 400 });
     }
 
     // Generate username from email (part before @)
@@ -34,13 +61,16 @@ export async function POST(request: Request) {
     } as RequestInit);
 
     if (!response.ok) {
-      let error = {};
+      let payload: unknown;
       try {
-        error = await response.json();
-      } catch (e) {
-        error = { error: `Backend error: ${response.status} ${response.statusText}` };
+        payload = await response.json();
+      } catch {
+        payload = null;
       }
-      return NextResponse.json(error, { status: response.status });
+      return NextResponse.json(
+        { error: errorMessage(payload) },
+        { status: response.status }
+      );
     }
 
     const data = await response.json();

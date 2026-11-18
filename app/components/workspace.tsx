@@ -42,12 +42,12 @@ export function Card({
         background: 'var(--bg-surface)',
         border: '1px solid var(--border-subtle)',
         borderRadius: 14,
-        padding: '18px 20px',
+        padding: '22px 24px',
         marginBottom: 18,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <h2 style={{ fontSize: 13, letterSpacing: '0.08em', color: 'var(--text-secondary)', margin: 0 }}>{title.toUpperCase()}</h2>
+        <h2 style={{ fontSize: 15, letterSpacing: '0.06em', color: 'var(--text-secondary)', margin: 0 }}>{title.toUpperCase()}</h2>
         {action}
       </div>
       {children}
@@ -58,8 +58,8 @@ export function Card({
 export function DataRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '7px 0', borderBottom: '1px solid var(--border-subtle)' }}>
-      <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>{label}</span>
-      <span style={{ fontSize: 13, color: 'var(--text-primary)', textAlign: 'right' }}>{value ?? '—'}</span>
+      <span style={{ fontSize: 13, color: 'var(--text-faint)' }}>{label}</span>
+      <span style={{ fontSize: 14, color: 'var(--text-primary)', textAlign: 'right' }}>{value ?? '—'}</span>
     </div>
   );
 }
@@ -84,12 +84,12 @@ export function Badge({ children }: { children: React.ReactNode }) {
 }
 
 export function EmptyState({ message }: { message: string }) {
-  return <p style={{ fontSize: 12, color: 'var(--text-faint)', margin: 0 }}>{message}</p>;
+  return <p style={{ fontSize: 14, color: 'var(--text-faint)', margin: 0 }}>{message}</p>;
 }
 
 export function ErrorNote({ message }: { message: string }) {
   return (
-    <p style={{ fontSize: 12, color: 'var(--danger-text)', background: 'var(--danger-soft)', border: '1px solid var(--danger-border)', borderRadius: 10, padding: '10px 12px' }}>
+    <p style={{ fontSize: 14, color: 'var(--danger-text)', background: 'var(--danger-soft)', border: '1px solid var(--danger-border)', borderRadius: 10, padding: '12px 14px' }}>
       {message}
     </p>
   );

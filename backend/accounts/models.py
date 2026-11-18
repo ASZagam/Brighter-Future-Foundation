@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, Permission, UserManager
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 
@@ -91,8 +91,18 @@ class User(AbstractUser):
         self.save(update_fields=["locked_until"])
 
     def increment_failed_login_attempts(self):
-        self.failed_login_attempts += 1
-        self.save(update_fields=["failed_login_attempts"])
+        with transaction.atomic():
+            user = type(self).objects.select_for_update().get(pk=self.pk)
+            user.failed_login_attempts += 1
+            update_fields = ["failed_login_attempts"]
+            if user.failed_login_attempts >= settings.LOGIN_MAX_FAILED_ATTEMPTS:
+                user.locked_until = timezone.now() + timedelta(
+                    minutes=settings.LOGIN_LOCKOUT_MINUTES
+                )
+                update_fields.append("locked_until")
+            user.save(update_fields=update_fields)
+            self.failed_login_attempts = user.failed_login_attempts
+            self.locked_until = user.locked_until
 
     def reset_failed_login_attempts(self):
         self.failed_login_attempts = 0
@@ -196,6 +206,7 @@ class AuditLog(models.Model):
         ("email_verified", "Email Verified"),
         ("role_assigned", "Role Assigned"),
         ("role_removed", "Role Removed"),
+        ("notification_broadcast_sent", "Notification Broadcast Sent"),
         ("account_locked", "Account Locked"),
         ("account_unlocked", "Account Unlocked"),
         ("failed_login", "Failed Login"),

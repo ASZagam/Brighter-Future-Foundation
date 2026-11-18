@@ -247,9 +247,9 @@ export default function FileUploadsPage() {
         </section>
 
         <div className="ops-status-strip">
-          <span className="go">● Vault live</span>
-          <span>POST multipart to <b>/api/core/file-uploads/</b> · totals from <b>/file-uploads/stats/</b></span>
-          <span className="nl">PDF · DOCX · XLSX · PNG · JPG</span>
+          <span className="go">{count} files in the library</span>
+          <span>Documents and images available to authorized staff.</span>
+          <span className="nl">PDF, office documents, text files, and images</span>
         </div>
       </main>
 

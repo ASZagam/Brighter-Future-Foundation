@@ -10,6 +10,7 @@ import type { DashboardUser } from '../dashboard/hooks/useDashboard';
 
 export default function MembersShell({ preselectedId }: { preselectedId?: string }) {
   const [user, setUser] = useState<DashboardUser | null>(null);
+  const [sidebarHidden, setSidebarHidden] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -25,10 +26,10 @@ export default function MembersShell({ preselectedId }: { preselectedId?: string
   }, []);
 
   return (
-    <div className="db-shell members-shell">
-      <Sidebar user={user} />
+    <div className={`db-shell members-shell${sidebarHidden ? ' sidebar-hidden' : ''}`}>
+      <Sidebar user={user} hidden={sidebarHidden} />
       <div className="db-main">
-        <TopHeader notificationCount={3} />
+        <TopHeader notificationCount={3} onToggleSidebar={() => setSidebarHidden((hidden) => !hidden)} />
         <MembersRoster initialMemberId={preselectedId} />
       </div>
     </div>

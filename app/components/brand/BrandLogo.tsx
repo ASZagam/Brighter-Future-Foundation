@@ -9,18 +9,15 @@ import logo from './bff-logo.png';
  * than importing the image file itself, so there is a single asset, a single
  * set of dimensions and a single contrast treatment to reason about.
  *
- * The artwork is dark navy line art on a transparent background. On a dark
- * surface that would disappear, so the mark always sits on a light plate
- * (`.brand-logo`). The plate is invisible against the light-mode header and
- * becomes the contrast anchor in dark mode, which means the logo can never be
- * recoloured or filtered to "fix" dark mode — it just works.
+ * The artwork includes its own colors and transparent background, so it is
+ * rendered directly without a decorative tile.
  */
 
 /** Intrinsic dimensions of the trimmed asset, after transparent padding was removed. */
 const INTRINSIC = { width: 294, height: 342 };
 
 export function BrandLogo({
-  height = 32,
+  height = 40,
   className = '',
   priority = false,
   alt = '',
@@ -39,9 +36,10 @@ export function BrandLogo({
   src?: string | null;
 }) {
   const width = Math.round((INTRINSIC.width / INTRINSIC.height) * height);
+  const logoClassName = src ? '' : 'brand-logo--default';
 
   return (
-    <span className={`brand-logo${className ? ` ${className}` : ''}`} style={{ height }}>
+    <span className={`brand-logo ${logoClassName}${className ? ` ${className}` : ''}`} style={{ height }}>
       <Image
         src={src || logo}
         alt={alt}

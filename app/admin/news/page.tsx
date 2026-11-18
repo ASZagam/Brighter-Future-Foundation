@@ -299,9 +299,8 @@ export default function NewsPage() {
         </section>
 
         <div className="ops-status-strip">
-          <span className="go">● Newsroom live</span>
-          <span>GET <b>/api/core/news/</b> · totals from <b>/news/stats/</b></span>
-          <span className="nl">Live via REST</span>
+          <span className="go">{count} stories</span>
+          <span>Manage drafts and published updates for the public newsroom.</span>
         </div>
       </main>
 

@@ -11,19 +11,24 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsLoading(true);
     setError('');
+    if (password !== password2) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setIsLoading(true);
 
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, phone, password })
+        body: JSON.stringify({ fullName, email, phone, password, password2 })
       });
 
       if (response.ok) {
@@ -33,7 +38,7 @@ export default function RegisterPage() {
         router.push('/auth/login');
       } else {
         const body = await response.json();
-        setError(body.error || 'Unable to create account');
+        setError(typeof body.error === 'string' ? body.error : 'Registration could not be completed. Please review your details and try again.');
       }
     } catch {
       setError('Unable to reach the server. Please try again.');
@@ -62,6 +67,7 @@ export default function RegisterPage() {
           onChange={setEmail}
           required
           autoComplete="email"
+          placeholder="e.g. member@example.org"
         />
         <AuthField
           label="Phone"
@@ -77,6 +83,19 @@ export default function RegisterPage() {
           onChange={setPassword}
           required
           autoComplete="new-password"
+          placeholder="Example: Cedar!Orbit7426"
+          minLength={8}
+        />
+        <p className="ac-muted">Password must be at least 8 characters. Choose a unique password.</p>
+        <AuthField
+          label="Re-enter password"
+          type="password"
+          value={password2}
+          onChange={setPassword2}
+          required
+          autoComplete="new-password"
+          placeholder="Re-enter your password"
+          minLength={8}
         />
 
         {error ? <AuthStatus tone="error">{error}</AuthStatus> : null}

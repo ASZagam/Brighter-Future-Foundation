@@ -42,28 +42,24 @@ export default async function TransparencyPage() {
               <div className="pub-figure">
                 <p className="pub-figure-label">Funds raised</p>
                 <p className="pub-figure-value">
-                  {transparency.funds_raised ? formatCurrency(transparency.funds_raised) : '—'}
+                  {formatCurrency(transparency.funds_raised)}
                 </p>
                 <p className="pub-figure-note">Completed donations only</p>
               </div>
               <div className="pub-figure">
                 <p className="pub-figure-label">Budget committed</p>
                 <p className="pub-figure-value">
-                  {transparency.budget_committed
-                    ? formatCurrency(transparency.budget_committed)
-                    : '—'}
+                  {formatCurrency(transparency.budget_committed)}
                 </p>
                 <p className="pub-figure-note">Sum of published program budgets</p>
               </div>
               <div className="pub-figure">
                 <p className="pub-figure-label">Expenditure recorded</p>
                 <p className="pub-figure-value">
-                  {transparency.expenditure_recorded
-                    ? formatCurrency(transparency.expenditure_recorded)
-                    : '—'}
+                  {formatCurrency(transparency.expenditure_recorded)}
                 </p>
                 <p className="pub-figure-note">
-                  {transparency.expenditure_recorded
+                  {transparency.expenditure_recorded !== null
                     ? 'Recorded against programs'
                     : 'No expenditure has been recorded yet'}
                 </p>

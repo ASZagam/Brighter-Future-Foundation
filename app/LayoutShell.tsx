@@ -17,6 +17,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
     pathname.startsWith('/references') ||
     pathname.startsWith('/file-uploads') ||
     pathname.startsWith('/notifications') ||
+    pathname.startsWith('/my-programs') ||
     pathname.startsWith('/beneficiaries') ||
     pathname.startsWith('/volunteer') ||
     pathname.startsWith('/member') ||

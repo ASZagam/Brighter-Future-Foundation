@@ -216,9 +216,9 @@ export default function ReferencesPage() {
         </section>
 
         <div className="ops-status-strip">
-          <span className="go">● Reference tables live</span>
-          <span>GET <b>/api/core/countries/</b> · <b>/api/core/states/</b></span>
-          <span className="nl">Read-only</span>
+          <span className="go">Reference data</span>
+          <span>Countries and states used across the foundation.</span>
+          <span className="nl">View only</span>
         </div>
       </main>
     </OpsShell>

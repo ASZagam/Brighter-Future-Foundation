@@ -185,8 +185,12 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "newsletter": os.getenv("NEWSLETTER_THROTTLE_RATE", "10/hour"),
         "donation": os.getenv("DONATION_THROTTLE_RATE", "5/hour"),
+        "login": os.getenv("LOGIN_THROTTLE_RATE", "10/hour"),
     },
 }
+
+LOGIN_MAX_FAILED_ATTEMPTS = int(os.getenv("LOGIN_MAX_FAILED_ATTEMPTS", "5"))
+LOGIN_LOCKOUT_MINUTES = int(os.getenv("LOGIN_LOCKOUT_MINUTES", "30"))
 
 
 
@@ -203,6 +207,7 @@ EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@brighterfuture.org")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 # Token Expiration (in hours)
 EMAIL_VERIFICATION_TOKEN_EXPIRATION = int(os.getenv("EMAIL_VERIFICATION_TOKEN_EXPIRATION", "24"))

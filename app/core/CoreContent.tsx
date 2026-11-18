@@ -16,6 +16,7 @@ interface CoreStats {
 }
 
 const actions = [
+  { href: '/admin/about', title: 'About Us profile', copy: 'Edit, preview, and publish the public organization story.', icon: '✎', featured: true },
   { href: '/settings', title: 'Organization settings', copy: 'Manage platform defaults and support details.', icon: '⚙', featured: true },
   { href: '/notifications', title: 'Notification center', copy: 'Review alerts and platform messages.', icon: 'bell' },
   { href: '/file-uploads', title: 'File uploads', copy: 'Manage documents, images, and shared content.', icon: '↥' },
@@ -53,7 +54,7 @@ export default function CoreContent() {
       <div className="core-kicker" style={{ fontSize: 12 }}>
         <span>FOUNDATION &amp; ADMINISTRATION</span>
         <i>|</i>
-        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Core backend health, uploads, notifications &amp; audit</span>
+        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Organization settings, uploads, notifications, and activity</span>
       </div>
 
       <div className="core-heading">
@@ -132,9 +133,9 @@ export default function CoreContent() {
       ) : null}
 
       <div className="core-api-status">
-        <span className="go">● System Good</span>
-        <span>Django 5.2.15 · DRF 3.17.1 · PostgreSQL <b>bff_db</b></span>
-        <span className="nl">Live via REST</span>
+        <span className="go">Operations snapshot</span>
+        <span>{totalUploads} files · {stats?.pending_notifications ?? '—'} pending notifications</span>
+        <span className="nl">Time zone</span>
         <span>Etc/UTC</span>
       </div>
     </main>

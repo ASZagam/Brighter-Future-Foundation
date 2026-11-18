@@ -43,6 +43,7 @@ function formatDetails(details: Record<string, unknown> | undefined | null): str
 }
 
 export default function AdminAudit() {
+  const [sidebarHidden, setSidebarHidden] = useState(false);
   const [logs, setLogs] = useState<ActivityRecord[]>([]);
   const [user, setUser] = useState<DashboardUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -116,15 +117,15 @@ export default function AdminAudit() {
   }).length;
 
   return (
-    <div className="db-shell">
-      <Sidebar user={user} />
+    <div className={`db-shell${sidebarHidden ? ' sidebar-hidden' : ''}`}>
+      <Sidebar user={user} hidden={sidebarHidden} />
       <div className="db-main">
-        <TopHeader notificationCount={3} />
+        <TopHeader notificationCount={3} onToggleSidebar={() => setSidebarHidden((hidden) => !hidden)} />
         <main className="admin-content">
           <div className="admin-kicker" style={{ fontSize: 12 }}>
             <span>SYSTEM &amp; ADMIN</span>
             <i>|</i>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Immutable activity ledger from /api/core/activity-logs/</span>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Administrator history of account and platform activity</span>
           </div>
 
           <div className="admin-heading">
@@ -203,9 +204,9 @@ export default function AdminAudit() {
           </div>
 
           <div className="admin-status">
-            <span className="go">● Audit feed live</span>
-            <span>REST GET /api/core/activity-logs/?ordering=-created_at</span>
-            <span>Django 5.2 · DRF 3.17 · PostgreSQL <b>bff_db</b></span>
+            <span className="go">Audit activity</span>
+            <span>{logs.length} recorded events</span>
+            <span>Visible to administrators</span>
           </div>
         </main>
       </div>

@@ -19,6 +19,8 @@ class PublicOrganizationSerializer(serializers.ModelSerializer):
     public profile itself; there are no internal notes on this model.
     """
 
+    about_disciplines = serializers.SerializerMethodField()
+
     class Meta:
         model = OrganizationProfile
         fields = [
@@ -27,6 +29,10 @@ class PublicOrganizationSerializer(serializers.ModelSerializer):
             "mission",
             "vision",
             "history",
+            "about_intro",
+            "disciplines_intro",
+            "contact_intro",
+            "about_disciplines",
             "founder_name",
             "founder_title",
             "email",
@@ -40,6 +46,13 @@ class PublicOrganizationSerializer(serializers.ModelSerializer):
             "twitter",
             "website",
         ]
+
+    def get_about_disciplines(self, obj):
+        disciplines = [
+            item for item in obj.about_disciplines
+            if item.get("is_published", True)
+        ]
+        return sorted(disciplines, key=lambda item: item.get("display_order", 0))
 
 
 class PublicCapabilitySerializer(serializers.ModelSerializer):

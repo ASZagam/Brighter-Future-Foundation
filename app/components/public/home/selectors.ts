@@ -28,13 +28,11 @@ export const SECTION_LIMITS = {
 /**
  * The four headline figures, in display order.
  *
- * `source` is the label the API publishes the metric under. It differs from the
- * displayed label for the first slot: the site says "Programs delivered" while
- * the API reports "Programs on record", because the public record is a count of
- * tracked programmes, not a claim about completed delivery.
+ * The API's published labels are used directly so the cards cannot imply more
+ * than the underlying records establish.
  */
 const METRIC_SLOTS = [
-  { label: 'Programs delivered', source: 'Programs on record' },
+  { label: 'Programs on record', source: 'Programs on record' },
   { label: 'People reached', source: 'People reached' },
   { label: 'Active volunteers', source: 'Active volunteers' },
   { label: 'States reached', source: 'States reached' },
@@ -46,7 +44,7 @@ export type ResolvedMetricSlot = { label: string; metric: PublicMetric | undefin
 /**
  * Resolves each display slot against the published metrics. A slot with no
  * matching metric, or one flagged `available: false`, stays unresolved so the
- * section can render its "Data pending" state.
+ * section can render its "Awaiting data" state.
  */
 export function selectHomeMetrics(metrics: PublicMetric[]): ResolvedMetricSlot[] {
   return METRIC_SLOTS.map((slot) => ({
@@ -76,15 +74,23 @@ export function selectNewsroomPosts(news: PublicNews[]): PublicNews[] {
 }
 
 /**
- * Prefers the organisation's configured hero banner and falls back to the first
- * published gallery image. Returns null when nothing has been published, so the
- * hero shows its "pending publication" placeholder rather than a stock image.
+ * Prefers the organisation's configured banner, then the supplied foundation
+ * banner, and finally a published gallery image.
  */
 export function selectHeroImage(
   org: PublicOrganization | null,
   gallery: PublicGalleryItem[],
 ): string | null {
-  return absoluteMediaUrl(org?.hero_banner) ?? absoluteMediaUrl(gallery[0]?.image);
+  return (
+    absoluteMediaUrl(org?.hero_banner) ??
+    absoluteMediaUrl('/media/organization/banner/bff_banner_1920x720.jpg') ??
+    absoluteMediaUrl(gallery[0]?.image)
+  );
+}
+
+/** Uses the original uncropped group photo for responsive and About imagery. */
+export function selectFoundationPhoto(): string {
+  return absoluteMediaUrl('/media/organization/banner/bff_g3.jpeg') ?? '';
 }
 
 /** Trims the org mission for card use, or null when the record is blank. */

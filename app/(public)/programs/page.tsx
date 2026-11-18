@@ -27,7 +27,6 @@ export default async function ProgramsPage() {
   const programs = await getPrograms();
   const active = programs.filter((p) => p.status === 'active').length;
   const completed = programs.filter((p) => p.status === 'completed').length;
-  const planning = programs.filter((p) => p.status === 'planning').length;
 
   return (
     <>
@@ -37,7 +36,7 @@ export default async function ProgramsPage() {
           <h1>Everything we are running</h1>
           <p className="pub-page-lede">
             {programs.length > 0
-              ? `${programs.length} program${programs.length === 1 ? '' : 's'} on record — ${active} active, ${planning} in planning, ${completed} completed.`
+              ? `${programs.length} published program${programs.length === 1 ? '' : 's'} — ${active} active, ${completed} completed.`
               : 'Program records appear here once they are published for public viewing.'}
           </p>
         </div>
@@ -60,8 +59,7 @@ export default async function ProgramsPage() {
                   ) : null}
                   <div className="pub-program-body">
                     <p className="pub-tag">
-                      {program.category_name || 'Program'} ·{' '}
-                      {STATUS_LABEL[program.status] || program.status}
+                      {program.category_name || 'Program'} · {STATUS_LABEL[program.status] || program.status}
                     </p>
                     <h3>
                       <a href={`/programs/${program.slug}`}>{program.title}</a>
@@ -72,7 +70,7 @@ export default async function ProgramsPage() {
                     <dl className="pub-program-meta">
                       <div>
                         <dt>Location</dt>
-                        <dd>{[program.state_name, program.lga].filter(Boolean).join(', ') || '—'}</dd>
+                        <dd>{[program.state_name, program.lga].filter(Boolean).join(', ') || 'Awaiting data'}</dd>
                       </div>
                       <div>
                         <dt>Budget</dt>
@@ -83,7 +81,7 @@ export default async function ProgramsPage() {
                         <dd>
                           {program.beneficiary_count > 0
                             ? formatCount(program.beneficiary_count)
-                            : 'Not yet recorded'}
+                            : 'Awaiting data'}
                         </dd>
                       </div>
                       <div>

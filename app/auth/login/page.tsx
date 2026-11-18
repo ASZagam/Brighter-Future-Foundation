@@ -20,7 +20,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const requestedPath = safeNext();
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -48,12 +47,6 @@ export default function LoginPage() {
       <p className="ac-lede">
         Access your dashboard, membership, volunteering and giving tools.
       </p>
-
-      {requestedPath ? (
-        <p className="ac-notice">
-          Sign in to continue to <strong>{requestedPath}</strong>. You will be returned there when your role allows access.
-        </p>
-      ) : null}
 
       <form className="ac-form" onSubmit={handleSubmit}>
         <AuthField

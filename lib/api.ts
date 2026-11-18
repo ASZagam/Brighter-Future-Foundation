@@ -38,6 +38,21 @@ export async function fetchWithAuth(
   return response;
 }
 
+function formatApiError(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.map(formatApiError).filter(Boolean).join(', ');
+  if (value && typeof value === 'object') {
+    return Object.entries(value)
+      .map(([field, detail]) => {
+        const message = formatApiError(detail);
+        return message ? `${field}: ${message}` : '';
+      })
+      .filter(Boolean)
+      .join('; ');
+  }
+  return '';
+}
+
 /**
  * Make an authenticated API call to Django backend
  */
@@ -57,12 +72,10 @@ export async function apiCall<T = any>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    const message =
-      error.detail ||
-      error.error ||
-      (Array.isArray(error.detail) ? error.detail.join(', ') : '') ||
-      `API call failed: ${response.status}`;
+    const error: unknown = await response.json().catch(() => ({}));
+    const message = error && typeof error === 'object'
+      ? formatApiError(Reflect.get(error, 'detail') ?? Reflect.get(error, 'error')) || `API call failed: ${response.status}`
+      : `API call failed: ${response.status}`;
     const apiError = new Error(message) as Error & { status?: number };
     apiError.status = response.status;
     throw apiError;

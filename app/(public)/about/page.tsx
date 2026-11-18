@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { EmptyState, SectionHeading } from '@/app/components/public/Primitives';
 import { getCapabilities, getOrganization, getPrograms } from '@/lib/publicApi';
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export async function generateMetadata(): Promise<Metadata> {
   const org = await getOrganization();
@@ -22,11 +22,23 @@ export default async function AboutPage() {
     getPrograms(),
   ]);
 
-  const disciplines = capabilities.length > 0 ? capabilities.length : 6;
+  const aboutDisciplines = org
+    ? org.about_disciplines
+    : capabilities.map((cap, index) => ({
+        id: String(cap.id),
+        name: cap.name,
+        description: cap.description,
+        display_order: index,
+        is_published: true,
+      }));
   const locations = Array.from(
-    new Set(programs.map((p) => p.state_name).filter((v): v is string => Boolean(v)))
+    new Set(
+      programs
+        .filter((program) => program.status === 'active')
+        .map((program) => program.state_name)
+        .filter((value): value is string => Boolean(value))
+    )
   );
-
   return (
     <>
       <section className="pub-page-hero">
@@ -38,46 +50,52 @@ export default async function AboutPage() {
       </section>
 
       <section className="pub-section">
-        <div className="pub-container pub-prose">
-          <h2>Mission</h2>
-          {org?.mission ? (
-            <p>{org.mission}</p>
-          ) : (
-            <EmptyState
-              title="Mission statement pending publication"
-              detail="This page is populated from the organization's published profile."
-            />
-          )}
+        <div className="pub-container">
+          <div className="pub-prose">
+            {org?.about_intro
+              ? org.about_intro.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)
+              : null}
 
-          <h2>Vision</h2>
-          {org?.vision ? (
-            <p>{org.vision}</p>
-          ) : (
-            <EmptyState
-              title="Vision statement pending publication"
-              detail="This page is populated from the organization's published profile."
-            />
-          )}
+            <h2>Mission</h2>
+            {org?.mission ? (
+              org.mission.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)
+            ) : (
+              <EmptyState
+                title="Mission statement pending publication"
+                detail="This page is populated from the organization's published profile."
+              />
+            )}
 
-          <h2>Our history</h2>
-          {org?.history ? (
-            <p>{org.history}</p>
-          ) : (
-            <EmptyState
-              title="Organizational history pending publication"
-              detail="This page is populated from the organization's published profile."
-            />
-          )}
+            <h2>Vision</h2>
+            {org?.vision ? (
+              org.vision.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)
+            ) : (
+              <EmptyState
+                title="Vision statement pending publication"
+                detail="This page is populated from the organization's published profile."
+              />
+            )}
 
-          {org?.founder_name ? (
-            <>
-              <h2>Leadership</h2>
-              <p>
-                <strong>{org.founder_name}</strong>
-                {org.founder_title ? ` — ${org.founder_title}` : ''}
-              </p>
-            </>
-          ) : null}
+            <h2>Our history</h2>
+            {org?.history ? (
+              org.history.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)
+            ) : (
+              <EmptyState
+                title="Organizational history pending publication"
+                detail="This page is populated from the organization's published profile."
+              />
+            )}
+
+            {org?.founder_name ? (
+              <>
+                <h2>Leadership</h2>
+                <p>
+                  <strong>{org.founder_name}</strong>
+                  {org.founder_title ? ` — ${org.founder_title}` : ''}
+                </p>
+              </>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -86,21 +104,21 @@ export default async function AboutPage() {
           <SectionHeading
             eyebrow="What we do"
             title="Our disciplines"
-            lede="Programme areas maintained in the platform."
+            lede={org?.disciplines_intro || 'Our work is organized around programme and development areas that address community challenges and support sustainable impact.'}
           />
-          {capabilities.length > 0 ? (
+          {aboutDisciplines.length > 0 ? (
             <ul className="pub-card-grid">
-              {capabilities.map((cap) => (
-                <li className="pub-card" key={cap.id}>
-                  <h3>{cap.name}</h3>
-                  <p>{cap.description}</p>
+              {aboutDisciplines.map((discipline) => (
+                <li className="pub-card" key={discipline.id}>
+                  <h3>{discipline.name}</h3>
+                  <p>{discipline.description}</p>
                 </li>
               ))}
             </ul>
           ) : (
             <EmptyState
               title="Discipline pillars not published yet"
-              detail={`The platform is structured around ${disciplines} capability areas, which appear here once published.`}
+              detail="Published programme and development areas will appear here."
             />
           )}
         </div>
@@ -109,6 +127,7 @@ export default async function AboutPage() {
       <section className="pub-section" id="contact">
         <div className="pub-container">
           <SectionHeading eyebrow="Contact" title="Reach the foundation" />
+          {org?.contact_intro ? <div className="pub-prose">{org.contact_intro.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div> : null}
           {org?.email || org?.phone || org?.address ? (
             <dl className="pub-contact-list">
               {org.email ? (

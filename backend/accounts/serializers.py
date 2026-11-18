@@ -1,10 +1,21 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password as django_validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework import serializers
 import uuid
 User = get_user_model()
 from .utils import generate_username
 from .models import User, Role, UserRole, Roles
+
+
+def password_validation_errors(password, user=None):
+    try:
+        django_validate_password(password, user=user)
+    except DjangoValidationError as error:
+        return error.messages
+    return []
+
 
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -92,6 +103,17 @@ class RegisterSerializer(serializers.ModelSerializer):
                 {"password": "Passwords do not match."}
             )
 
+        candidate = User(
+            username=attrs["email"].split("@", 1)[0],
+            email=attrs["email"],
+            first_name=attrs.get("first_name", ""),
+            last_name=attrs.get("last_name", ""),
+            full_name=attrs.get("full_name", ""),
+        )
+        password_errors = password_validation_errors(attrs["password"], user=candidate)
+        if password_errors:
+            raise serializers.ValidationError({"password": password_errors})
+
         if User.objects.filter(email=attrs["email"]).exists():
             raise serializers.ValidationError(
                 {"email": "A user with this email already exists."}
@@ -151,6 +173,14 @@ class ChangePasswordSerializer(serializers.Serializer):
     new_password = serializers.CharField(write_only=True)
     new_password_confirm = serializers.CharField(write_only=True)
 
+    def validate_new_password(self, value):
+        password_errors = password_validation_errors(
+            value, user=self.context.get("user")
+        )
+        if password_errors:
+            raise serializers.ValidationError(password_errors)
+        return value
+
     def validate(self, data):
         if data['new_password'] != data['new_password_confirm']:
             raise serializers.ValidationError({'new_password_confirm': 'New passwords do not match.'})
@@ -165,6 +195,14 @@ class PasswordResetSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField(write_only=True)
     new_password_confirm = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        password_errors = password_validation_errors(
+            value, user=self.context.get("user")
+        )
+        if password_errors:
+            raise serializers.ValidationError(password_errors)
+        return value
 
     def validate(self, data):
         if data['new_password'] != data['new_password_confirm']:

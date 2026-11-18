@@ -36,7 +36,7 @@
 .member-tab.active .member-tab-count { background: rgba(255, 255, 255, .22); color: var(--text-inverse); }
 
 /* Filter bar */
-.members-filters { display: grid; grid-template-columns: auto minmax(180px, 1.35fr) repeat(3, minmax(130px, .9fr)) auto; gap: 1px; margin-bottom: 12px; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--bg-subtle); overflow: hidden; }
+.members-filters { display: grid; grid-template-columns: auto minmax(180px, 1.35fr) repeat(4, minmax(130px, .9fr)) auto; gap: 1px; margin-bottom: 12px; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--bg-subtle); overflow: hidden; }
 .members-filters > * { min-height: 34px; padding: 0 10px; border: 0; background: var(--bg-surface); color: var(--text-secondary); font-size: 12px; }
 .members-filters > span { display: grid; place-items: center; color: var(--text-faint); font-size: 16px; background: var(--bg-inset); }
 .members-filters select:focus, .members-filters input:focus { outline: 1px solid var(--focus-ring); outline-offset: -1px; }

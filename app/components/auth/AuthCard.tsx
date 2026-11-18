@@ -42,7 +42,7 @@ function AuthLockup({ center, subtitle }: { center: boolean; subtitle: string })
           Decorative: the wordmark immediately beside it already names the
           organisation, so an alt text would just be announced twice.
         */}
-        <BrandLogo height={30} priority />
+        <BrandLogo height={52} priority />
       </span>
       <span className="ac-lockup__text">
         <span className="ac-lockup__kicker">BRIGHTER FUTURE FOUNDATION</span>
@@ -62,6 +62,7 @@ export function AuthField({
   autoComplete,
   placeholder,
   disabled,
+  minLength,
 }: {
   label: string;
   type?: string;
@@ -71,6 +72,7 @@ export function AuthField({
   autoComplete?: string;
   placeholder?: string;
   disabled?: boolean;
+  minLength?: number;
 }) {
   const id = useId();
 
@@ -87,6 +89,7 @@ export function AuthField({
         autoComplete={autoComplete}
         placeholder={placeholder}
         disabled={disabled}
+        minLength={minLength}
       />
     </label>
   );

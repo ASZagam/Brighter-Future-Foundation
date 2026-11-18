@@ -170,13 +170,16 @@ class Program(models.Model):
         self.full_clean(exclude=["category", "country", "state", "manager", "coordinator", "created_by", "updated_by", "deleted_by"])
         if not self.program_id:
             year = timezone.now().year
-            last_program = Program.objects.exclude(program_id="").order_by("-created_at").first()
-            next_number = 1
-            if last_program:
+            prefix = f"PRG-{year}-"
+            numbers = []
+            for existing_id in Program.objects.filter(program_id__startswith=prefix).values_list("program_id", flat=True):
                 try:
-                    next_number = int(last_program.program_id.split("-")[-1]) + 1
-                except Exception:
-                    pass
+                    numbers.append(int(existing_id.removeprefix(prefix)))
+                except ValueError:
+                    continue
+            next_number = max(numbers, default=0) + 1
+            while Program.objects.filter(program_id=f"{prefix}{next_number:05d}").exists():
+                next_number += 1
             self.program_id = f"PRG-{year}-{next_number:05d}"
         if not self.slug:
             self.slug = slugify(self.title)
@@ -369,6 +372,59 @@ class ProgramVolunteerAssignment(models.Model):
             AuditService.log(user=self.assigned_by, action="volunteer_assigned", details={"program_id": self.program.program_id, "volunteer_id": str(self.volunteer_id)})
 
 
+class ProgramStaffAssignment(models.Model):
+    """Foundation staff/team members conducting a program (any user role)."""
+
+    ROLE_CHOICES = [
+        ("program_coordinator", "Program Coordinator"),
+        ("team_lead", "Team Lead"),
+        ("volunteer", "Volunteer"),
+        ("field_officer", "Field Officer"),
+        ("medical_officer", "Medical Officer"),
+        ("logistics", "Logistics Officer"),
+        ("finance", "Finance Officer"),
+        ("communication", "Communication Officer"),
+        ("monitoring", "M&E Officer"),
+        ("other", "Other"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    program = models.ForeignKey(
+        Program,
+        on_delete=models.CASCADE,
+        related_name="staff_assignments",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="program_staff_assignments",
+    )
+    role_in_program = models.CharField(
+        max_length=50,
+        choices=ROLE_CHOICES,
+        default="other",
+    )
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    assigned_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="staff_program_assignments_given",
+    )
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("program", "user")
+        ordering = ["role_in_program", "assigned_at"]
+        verbose_name = "Program Staff Assignment"
+        verbose_name_plural = "Program Staff Assignments"
+
+    def __str__(self):
+        return f"{self.user} → {self.program.title} ({self.get_role_in_program_display()})"
+
+
 class OrganizationProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
@@ -379,6 +435,16 @@ class OrganizationProfile(models.Model):
     vision = models.TextField()
 
     history = models.TextField(blank=True)
+    about_intro = models.TextField(blank=True)
+    disciplines_intro = models.TextField(blank=True)
+    contact_intro = models.TextField(blank=True)
+    about_disciplines = models.JSONField(default=list, blank=True)
+    about_draft = models.JSONField(default=dict, blank=True)
+    about_draft_banner = models.ImageField(
+        upload_to="organization/banner/drafts/",
+        blank=True,
+        null=True,
+    )
 
     founder_name = models.CharField(max_length=255)
     founder_title = models.CharField(max_length=255)
@@ -752,6 +818,10 @@ class MembershipStatus(models.TextChoices):
 
 class Member(models.Model):
 
+    class RegistrationSource(models.TextChoices):
+        SELF_SERVICE = "self_service", "Self-registered"
+        ADMIN = "admin", "Admin-added"
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -768,6 +838,19 @@ class Member(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_member_records",
+    )
+    registration_source = models.CharField(
+        max_length=20,
+        choices=RegistrationSource.choices,
+        default=RegistrationSource.ADMIN,
+        db_index=True,
     )
 
     first_name = models.CharField(max_length=100)

@@ -206,6 +206,8 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
   const [stateFilter, setStateFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [sourceFilterInitialized, setSourceFilterInitialized] = useState(false);
   const [ordering, setOrdering] = useState('-created_at');
   const [moreFilters, setMoreFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -229,6 +231,13 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
   }, [searchTerm]);
 
   useEffect(() => {
+    const source = new URLSearchParams(window.location.search).get('registration_source');
+    if (source === 'self_service' || source === 'admin') setSourceFilter(source);
+    setSourceFilterInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!sourceFilterInitialized) return;
     let active = true;
     setLoading(true);
     (async () => {
@@ -240,6 +249,7 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
             state: stateFilter,
             membershipType: typeFilter,
             status: statusFilter,
+            registrationSource: sourceFilter,
             ordering,
           }),
           fetchMemberStats(),
@@ -262,7 +272,7 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
     return () => {
       active = false;
     };
-  }, [page, appliedSearch, stateFilter, typeFilter, statusFilter, ordering, refreshKey]);
+  }, [page, appliedSearch, stateFilter, typeFilter, statusFilter, sourceFilter, sourceFilterInitialized, ordering, refreshKey]);
 
   useEffect(() => {
     if (members.length === 0) {
@@ -331,6 +341,10 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
     setStateFilter('');
     setTypeFilter('');
     setStatusFilter('');
+    setSourceFilter('');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('registration_source');
+    window.history.replaceState({}, '', url);
     setOrdering('-created_at');
     setActiveTab('all');
     setPage(1);
@@ -541,6 +555,19 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
           <option value="">All Statuses</option>
           {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
+        <select aria-label="Registration source filter" value={sourceFilter} onChange={(event) => {
+          const source = event.target.value;
+          setSourceFilter(source);
+          setPage(1);
+          const url = new URL(window.location.href);
+          if (source) url.searchParams.set('registration_source', source);
+          else url.searchParams.delete('registration_source');
+          window.history.replaceState({}, '', url);
+        }}>
+          <option value="">All registration sources</option>
+          <option value="self_service">Self-registered</option>
+          <option value="admin">Admin-added</option>
+        </select>
         <button type="button" className="members-more-btn" onClick={() => setMoreFilters((value) => !value)}>More Filters</button>
       </div>
 
@@ -556,7 +583,7 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
           </label>
           <label>LIVE FILTERS
             <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
-              {[appliedSearch && `“${appliedSearch}”`, stateFilter, typeFilter, statusFilter].filter(Boolean).join(' · ') || 'No filters applied'}
+              {[appliedSearch && `“${appliedSearch}”`, stateFilter, typeFilter, statusFilter, sourceFilter === 'self_service' ? 'Self-registered' : sourceFilter === 'admin' ? 'Admin-added' : ''].filter(Boolean).join(' · ') || 'No filters applied'}
             </span>
           </label>
           <label className="members-advanced-reset">
@@ -571,7 +598,7 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
             <span className="member-roster-check"><input type="checkbox" aria-label="Select all displayed" checked={members.length > 0 && members.every((row) => checked.has(row.id))} onChange={() => { if (members.every((row) => checked.has(row.id))) setChecked(new Set()); else setChecked(new Set(members.map((row) => row.id))); }} /></span>
             <strong>Active Roster</strong>
             <span>(Showing {members.length} of {count} records)</span>
-            <span className="member-roster-sort">{loading ? 'Syncing…' : 'Live from PostgreSQL'}</span>
+            <span className="member-roster-sort">{loading ? 'Loading roster…' : 'Current records'}</span>
           </div>
           <div className="member-table-head">
             <span />
@@ -602,7 +629,7 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
                     <span className="member-ref">{`#${row.member_id}`}</span>
                   </span>
                 </span>
-                <span className="member-meta">{row.gender || '—'}{row.age != null ? ` · ${row.age} yrs` : ''}</span>
+                <span className="member-meta">{row.gender || '—'}{row.age != null ? ` · ${row.age} yrs` : ''} · {row.registration_source === 'self_service' ? 'Self-registered' : 'Admin-added'}</span>
               </div>
               <div className="member-cell">
                 <strong>{row.state || '—'}</strong>
@@ -673,8 +700,8 @@ export default function MembersRoster({ initialMemberId }: { initialMemberId?: s
             </div>
             <p className="member-modal-copy">
               {modalMode === 'edit'
-                ? 'Update the member record in the Django community registry.'
-                : 'Create a member directly in the Django community registry.'}
+                ? 'Update the member’s details and membership information.'
+                : 'Add a member and their membership information.'}
             </p>
             <div className="member-form-grid">
               <label>First name<input required value={form.first_name} onChange={(event) => setForm({ ...form, first_name: event.target.value })} placeholder="Amina" /></label>
@@ -750,6 +777,8 @@ function MemberDossier({
       <div className="dossier-window">
         <div className="dossier-window-item"><span>Location</span><span>{member.state || '—'} • {member.lga || '—'}</span></div>
         <div className="dossier-window-item"><span>Occupation</span><span>{member.occupation || '—'}</span></div>
+        <div className="dossier-window-item"><span>Registration source</span><span>{member.registration_source === 'self_service' ? 'Self-registered' : 'Admin-added'}</span></div>
+        {member.created_by_name ? <div className="dossier-window-item"><span>Added by</span><span>{member.created_by_name}</span></div> : null}
         <div className="dossier-window-item"><span>Joined</span><span>{formatDate(member.joined_at)}</span></div>
         <div className="dossier-window-item ok"><span>Live Sync</span><span>Linked to Django registry</span></div>
       </div>
@@ -814,7 +843,7 @@ function MemberDossier({
 
       {detailTab === 'timeline' && (
         <section>
-          <div className="dossier-section-header"><span>RECORD TIMELINE</span><span>PostgreSQL</span></div>
+          <div className="dossier-section-header"><span>RECORD TIMELINE</span><span>Member history</span></div>
           <div className="verification-stage">
             <span className="stage-icon passed">✓</span>
             <div className="stage-body">

@@ -1,38 +1,53 @@
 import Link from 'next/link';
-import { formatCount } from '@/lib/publicApi';
-import type { ImpactSummary } from '@/lib/publicApi';
 
 const DEFAULT_LEDE =
-  'We run water, health and outreach programmes and publish what we deliver — where it went, who it reached, and what it cost.';
+  'To empower individuals and communities through inclusive development initiatives, education, healthcare awareness, social support, capacity building, and sustainable community programmes that improve livelihoods, promote human dignity, and create lasting positive change. We are committed to identifying community needs, developing practical solutions, and working with stakeholders to ensure that opportunities for growth and development reach those who need them most.';
 
 /**
- * Landing-page hero. All copy comes from the published organisation profile;
- * the "records read from backend" chip only claims verification when the impact
- * endpoint actually answered.
+ * Landing-page hero. Copy comes from the published organisation profile.
  */
 export function Hero({
   name,
   slogan,
   mission,
   heroImage,
-  impact,
+  mobileHeroImage,
 }: {
   name: string;
   slogan: string | null;
   mission: string | null;
   heroImage: string | null;
-  impact: ImpactSummary | null;
+  mobileHeroImage: string;
 }) {
-  const verified = Boolean(impact);
-  const checkedAt = new Date().toISOString().slice(11, 16);
+  const fallbackImage = heroImage ? (
+    <picture className="pub-hero-media">
+      <source media="(max-width: 980px)" srcSet={mobileHeroImage} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={heroImage}
+        alt="Brighter Future Foundation team with students at a community school outreach."
+        className="pub-hero-img"
+        loading="eager"
+        fetchPriority="high"
+      />
+    </picture>
+  ) : (
+    <div
+      className="pub-hero-placeholder pub-hero-media"
+      role="img"
+      aria-label="Field image pending publication"
+    >
+      <span>Field image pending publication</span>
+    </div>
+  );
 
   return (
     <section className="pub-hero">
+      {fallbackImage}
       <div className="pub-hero-inner">
         <div className="pub-hero-copy">
-          <p className="pub-eyebrow">Field operations &amp; public reporting</p>
-          <h1>{name}</h1>
-          {slogan ? <p className="pub-hero-slogan">{slogan}</p> : null}
+          <p className="pub-eyebrow">{name || 'Brighter Future Foundation'}</p>
+          <h1>{slogan || 'Toward A Brighter Future.'}</h1>
           <p className="pub-hero-lede">{mission || DEFAULT_LEDE}</p>
 
           <div className="pub-hero-actions">
@@ -43,28 +58,6 @@ export function Hero({
               Explore Programs
             </Link>
           </div>
-
-          <p className="pub-verify-chip" data-verified={verified}>
-            <span className="pub-verify-dot" aria-hidden="true" />
-            {verified
-              ? `Records read from backend · ${formatCount(impact!.transparency.total_programs)} programs tracked · checked ${checkedAt} UTC`
-              : 'Verification data temporarily unavailable'}
-          </p>
-        </div>
-
-        <div className="pub-hero-media">
-          {heroImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={heroImage} alt="" className="pub-hero-img" />
-          ) : (
-            <div
-              className="pub-hero-placeholder"
-              role="img"
-              aria-label="Field image pending publication"
-            >
-              <span>Field image pending publication</span>
-            </div>
-          )}
         </div>
       </div>
     </section>

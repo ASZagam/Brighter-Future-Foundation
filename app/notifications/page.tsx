@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { apiGet, apiPost } from '../../lib/api';
-import { EmptyState, ErrorState, LoadingState, PageHeader, StatusBadge } from '../components/ui';
+import { Badge, Card, EmptyState, ErrorNote, WorkspaceShell } from '../components/workspace';
 
 interface NotificationRecord {
   id: number;
@@ -42,6 +41,7 @@ export default function NotificationsPage() {
       await apiPost('/core/notifications/mark_all_read/');
       setNotifications((items) => items.map((item) => ({ ...item, read: true })));
       setError('');
+      window.dispatchEvent(new Event('bff:notifications-updated'));
     } catch (err: any) {
       setError(err.message || 'Unable to mark notifications as read.');
     } finally {
@@ -53,51 +53,58 @@ export default function NotificationsPage() {
     try {
       await apiPost(`/core/notifications/${id}/mark_read/`);
       setNotifications((items) => items.map((item) => item.id === id ? { ...item, read: true } : item));
+      window.dispatchEvent(new Event('bff:notifications-updated'));
     } catch (err: any) {
       setError(err.message || 'Unable to mark notification as read.');
     }
   }
 
   return (
-    <div className='page-shell' style={{ padding: '3rem 0' }}>
-      <PageHeader eyebrow='Notification Center' title='Manage alerts and platform messages' description='Review unread messages and keep your team informed.' action={<Link href='/core' className='secondary-button compact-button'>Return to Core</Link>} />
-
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <p className='text-muted'>Your latest system messages.</p>
-        <button type='button' className='button-link' onClick={markAllRead} disabled={loading || markLoading}>
-          {markLoading ? 'Updating…' : 'Mark all read'}
-        </button>
-      </div>
-
-      {error ? <ErrorState message={error} /> : null}
-
-      {loading ? (
-        <LoadingState label='Loading notifications' />
-      ) : notifications.length === 0 ? (
-        <EmptyState title='All clear' description='No notifications are available right now.' />
-      ) : (
-        <div className='card-grid'>
-          {notifications.map((notification) => (
-            <div key={notification.id} className='card' style={{ opacity: notification.read ? 0.72 : 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'start' }}>
-                <div>
-                  <StatusBadge status={notification.notification_type} />
-                  <h2 style={{ margin: '0.75rem 0 0', fontSize: '1.05rem' }}>{notification.title}</h2>
+    <WorkspaceShell
+      kicker='Notifications'
+      title='Notifications'
+      subtitle='Messages and account updates sent to you.'
+    >
+      <Card
+        title='Notification history'
+        action={
+          <button
+            type='button'
+            className='notification-mark-all'
+            onClick={markAllRead}
+            disabled={loading || markLoading || !notifications.some((item) => !item.read)}
+          >
+            {markLoading ? 'Updating…' : 'Mark all read'}
+          </button>
+        }
+      >
+        {error ? <ErrorNote message={error} /> : null}
+        {loading ? <EmptyState message='Loading notifications…' /> : notifications.length === 0 ? (
+          <EmptyState message='You are all caught up. New account updates will appear here.' />
+        ) : (
+          <div className='notification-list'>
+            {notifications.map((notification) => (
+              <article key={notification.id} className={`notification-item${notification.read ? '' : ' is-unread'}`}>
+                <div className='notification-item-heading'>
+                  <div>
+                    <Badge>{notification.notification_type}</Badge>
+                    <h2>{notification.title}</h2>
+                  </div>
+                  {!notification.read ? (
+                    <button type='button' onClick={() => markRead(notification.id)} className='notification-mark-one'>
+                      Mark read
+                    </button>
+                  ) : (
+                    <span className='notification-read-label'>Read</span>
+                  )}
                 </div>
-                {!notification.read ? (
-                  <button type='button' onClick={() => markRead(notification.id)} className='action-button' style={{ minHeight: 'auto', padding: '10px 14px' }}>
-                    Mark read
-                  </button>
-                ) : (
-                  <span className='action-button' style={{ minHeight: 'auto', padding: '10px 14px' }}>Read</span>
-                )}
-              </div>
-              <p style={{ color: 'var(--text-secondary)', margin: '16px 0' }}>{notification.message}</p>
-              <p style={{ margin: 0, color: 'var(--text-muted)' }}>{notification.category || 'General'} · {new Date(notification.sent_at).toLocaleString()}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+                <p className='notification-item-message'>{notification.message}</p>
+                <p className='notification-item-meta'>{notification.category || 'General'} · {new Date(notification.sent_at).toLocaleString()}</p>
+              </article>
+            ))}
+          </div>
+        )}
+      </Card>
+    </WorkspaceShell>
   );
 }

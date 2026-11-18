@@ -21,6 +21,7 @@ const ROUTE_RULES: Record<string, AccessRule | null> = {
   '/admin/audit': { capability: 'view:audit' },
   '/admin/settings': { capability: 'manage:settings' },
   '/admin/core': { capability: 'manage:organizations' },
+  '/admin/about': { roles: [Roles.ADMIN] },
   '/admin/references': { capability: 'manage:references' },
   '/admin/beneficiaries': { capability: 'view:beneficiaries' },
   '/admin/programs': { capability: 'view:programs' },
@@ -29,11 +30,13 @@ const ROUTE_RULES: Record<string, AccessRule | null> = {
   '/admin/donations': { capability: 'view:donations' },
   '/admin/events': { capability: 'view:events' },
   '/admin/news': { capability: 'view:news' },
+  '/admin/broadcasts': { roles: [Roles.ADMIN] },
   '/admin': { roles: [Roles.ADMIN, Roles.COORDINATOR] },
 
-  '/file-uploads': null,
+  '/file-uploads': { roles: [Roles.ADMIN, Roles.COORDINATOR] },
   '/notifications': null,
   '/profile': null,
+  '/my-programs': null,
 
   // Self-service workspaces: each is scoped to the role that owns it.
   '/volunteer': { roles: [Roles.VOLUNTEER] },

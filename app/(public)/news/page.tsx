@@ -3,6 +3,7 @@ import { EmptyState, SectionHeading } from '@/app/components/public/Primitives';
 import { absoluteMediaUrl, formatDate, getEvents, getFieldReports, getNews } from '@/lib/publicApi';
 
 export const revalidate = 60;
+const EXCERPT_LENGTH = 220;
 
 export const metadata: Metadata = {
   title: 'Newsroom & Field Reports | Brighter Future Foundation',
@@ -40,7 +41,11 @@ export default async function NewsPage() {
                   <div className="pub-news-body">
                     <p className="pub-tag">{post.category || 'News'}</p>
                     <h3>{post.title}</h3>
-                    <p>{post.body}</p>
+                    <p>
+                      {post.body.length > EXCERPT_LENGTH
+                        ? `${post.body.slice(0, EXCERPT_LENGTH).trimEnd()}…`
+                        : post.body}
+                    </p>
                     <p className="pub-news-date">{formatDate(post.published_at)}</p>
                   </div>
                 </li>

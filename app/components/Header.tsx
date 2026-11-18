@@ -53,7 +53,7 @@ export default function Header() {
     <header className='site-header'>
       <div className='header-inner'>
         <Link href='/' className='brand'>
-          <BrandLogo height={40} alt='BFF logo' />
+          <BrandLogo height={48} alt='BFF logo' />
           <div>
             <p className='brand-title'>Brighter Future Foundation</p>
             <p className='brand-tag'>Empower. Engage. Elevate.</p>

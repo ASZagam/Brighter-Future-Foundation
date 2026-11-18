@@ -48,15 +48,15 @@ export function AllocationSection({
         <div className="pub-transparency-figures">
           <Figure
             label="Funds raised (completed donations)"
-            value={transparency?.funds_raised ? formatCurrency(transparency.funds_raised) : '—'}
+            value={formatCurrency(transparency?.funds_raised)}
           />
           <Figure
             label="Budget committed"
-            value={transparency?.budget_committed ? formatCurrency(transparency.budget_committed) : '—'}
+            value={formatCurrency(transparency?.budget_committed)}
           />
           <Figure
             label="Reporting coverage"
-            value={coverage !== null && coverage !== undefined ? `${coverage}%` : '—'}
+            value={coverage !== null && coverage !== undefined ? `${coverage}%` : 'Awaiting data'}
             note="Share of tracked programs with a published field report"
           />
         </div>

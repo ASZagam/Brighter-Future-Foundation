@@ -7,6 +7,7 @@ from .program_views import (
     ProgramDocumentViewSet,
     ProgramGalleryViewSet,
     ProgramReportViewSet,
+    ProgramStaffAssignmentViewSet,
     ProgramViewSet,
     ProgramVolunteerAssignmentViewSet,
 )
@@ -20,7 +21,10 @@ from .views import (
     MemberViewSet,
     NotificationViewSet,
     NewsPostViewSet,
+    OrganizationAboutView,
+    OrganizationAboutBannerView,
     OrganizationProfileView,
+    PublishOrganizationAboutView,
     OrganizationViewSet,
     SettingsViewSet,
     StateViewSet,
@@ -50,6 +54,7 @@ router.register(r"program-documents", ProgramDocumentViewSet, basename="program-
 router.register(r"program-gallery", ProgramGalleryViewSet, basename="program-gallery")
 router.register(r"program-reports", ProgramReportViewSet, basename="program-report")
 router.register(r"program-volunteer-assignments", ProgramVolunteerAssignmentViewSet, basename="program-volunteer-assignment")
+router.register(r"program-staff-assignments", ProgramStaffAssignmentViewSet, basename="program-staff-assignment")
 router.register(r"donations", DonationViewSet, basename="donation")
 router.register(r"events", EventViewSet, basename="event")
 router.register(r"news", NewsPostViewSet, basename="news")
@@ -62,4 +67,7 @@ urlpatterns = [
     path('system-info/', SystemInfoView.as_view(), name='system-info'),
     path('public-showcase/', PublicShowcaseView.as_view(), name='public-showcase'),
     path('organization/', OrganizationProfileView.as_view(), name='organization-profile'),
+    path('organization/about/', OrganizationAboutView.as_view(), name='organization-about'),
+    path('organization/about/banner/', OrganizationAboutBannerView.as_view(), name='organization-about-banner'),
+    path('organization/about/publish/', PublishOrganizationAboutView.as_view(), name='organization-about-publish'),
 ]

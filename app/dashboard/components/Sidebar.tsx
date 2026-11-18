@@ -21,6 +21,7 @@ function NavIcon({ name }: { name: string }) {
     calendar: <svg style={s} viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>,
     newspaper: <svg style={s} viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>,
     bell: <svg style={s} viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
+    send: <svg style={s} viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>,
     'folder-lock': <svg style={s} viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><rect x="10" y="13" width="8" height="5" rx="1"/><circle cx="14" cy="12.5" r="1.5"/></svg>,
     shield: <svg style={s} viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m9 12 2 2 4-4"/></svg>,
     'table-2': <svg style={s} viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>,
@@ -35,12 +36,11 @@ function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
-export default function Sidebar({ user }: { user: CurrentUser | null }) {
+export default function Sidebar({ user, hidden = false }: { user: CurrentUser | null; hidden?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const displayName = user?.full_name || user?.username || 'Guest';
-  const office = 'Abuja Office';
   const sections = navigationFor(user);
   const workspaces = workspacesFor(user).filter(
     (workspace, index, list) => list.findIndex((w) => w.href === workspace.href) === index
@@ -48,16 +48,14 @@ export default function Sidebar({ user }: { user: CurrentUser | null }) {
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
+  if (hidden) return null;
+
   return (
     <aside className="db-sidebar">
       <div className="db-sidebar-brand">
-        <BrandLogo height={28} alt="Brighter Future Foundation logo" />
-        <div>
-          <span className="db-sidebar-brand-name">BFF Ops</span>
-          <span className="db-sidebar-brand-sub">OPERATIONS</span>
-        </div>
+        <BrandLogo height={80} alt="Brighter Future Foundation logo" />
+        <span className="db-sidebar-org">Brighter Future Foundation</span>
       </div>
-      <p className="db-sidebar-org">Brighter Future Foundation</p>
 
       <nav className="db-sidebar-nav">
         {sections.map((section) => (
@@ -110,7 +108,6 @@ export default function Sidebar({ user }: { user: CurrentUser | null }) {
           <div className="db-sidebar-avatar">{getInitials(displayName)}</div>
           <div className="db-sidebar-user-info">
             <span className="db-sidebar-user-name">{displayName}</span>
-            <span className="db-sidebar-user-office">{office}</span>
           </div>
         </div>
         <div className="db-sidebar-user-role">

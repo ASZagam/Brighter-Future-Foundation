@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
@@ -19,6 +20,7 @@ from .serializers import (
     RegisterSerializer,
     UserSerializer,
     VerifyEmailSerializer,
+    password_validation_errors,
 )
 from .services import AuditService
 
@@ -27,6 +29,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import AuthenticationFailed
 from drf_spectacular.utils import extend_schema
+from core.models import Member, MembershipStatus, MembershipType
 
 
 class CustomTokenObtainPairSerializer(serializers.Serializer):
@@ -42,18 +45,41 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
         if not email and not username:
             raise serializers.ValidationError({"email": "Email or username is required."})
 
-        user = authenticate(
+        user = (
+            User.objects.filter(email__iexact=email).first()
+            if email
+            else User.objects.filter(username=username).first()
+        )
+        if user and user.is_locked:
+            raise AuthenticationFailed(
+                "Account is temporarily locked. Please try again later."
+            )
+
+        authenticated_user = authenticate(
             email=attrs["email"],
             password=attrs["password"],
         ) if email else authenticate(username=username, password=attrs["password"])
 
-        if not user:
+        if not authenticated_user:
+            if user:
+                user.increment_failed_login_attempts()
+                AuditService.log(
+                    user=user,
+                    action="failed_login",
+                    request=self.context.get("request"),
+                    details={"failed_attempts": user.failed_login_attempts},
+                )
+                if user.is_locked:
+                    AuditService.log(
+                        user=user,
+                        action="account_locked",
+                        request=self.context.get("request"),
+                        details={"failed_attempts": user.failed_login_attempts},
+                    )
             raise AuthenticationFailed("Invalid email or password.")
 
-        if user.is_locked:
-            raise AuthenticationFailed(
-                "Account is temporarily locked. Please try again later."
-            )
+        user = authenticated_user
+        user.reset_failed_login_attempts()
 
         if not user.email_verified:
             raise AuthenticationFailed("Email address has not been verified.")
@@ -77,6 +103,7 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
 
 class AuthLoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_scope = "login"
 
 
 class RegisterView(APIView):
@@ -86,7 +113,29 @@ class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        with transaction.atomic():
+            user = serializer.save()
+            member = Member.objects.filter(email__iexact=user.email).first()
+            if member:
+                if member.user_id and member.user_id != user.pk:
+                    raise ValidationError({"email": "This membership record is already linked to an account."})
+                member.user = user
+                member.save(update_fields=["user", "updated_at"])
+            else:
+                name_parts = user.full_name.strip().split(maxsplit=1)
+                Member.objects.create(
+                    user=user,
+                    first_name=user.first_name or (name_parts[0] if name_parts else user.username),
+                    last_name=user.last_name or (name_parts[1] if len(name_parts) > 1 else ""),
+                    email=user.email,
+                    phone=user.phone or "",
+                    gender="",
+                    state="",
+                    lga="",
+                    membership_type=MembershipType.REGULAR,
+                    status=MembershipStatus.PENDING,
+                    registration_source=Member.RegistrationSource.SELF_SERVICE,
+                )
 
         EmailService.send_verification_email(user, request)
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
@@ -132,6 +181,9 @@ class ResetPasswordView(APIView):
             raise ValidationError('Invalid or expired password reset token.')
 
         user = reset_token.user
+        password_errors = password_validation_errors(new_password, user=user)
+        if password_errors:
+            raise ValidationError({"new_password": password_errors})
         user.set_password(new_password)
         user.last_password_change = timezone.now()
         user.save(update_fields=['password', 'last_password_change'])
@@ -156,8 +208,22 @@ class VerifyEmailView(APIView):
         token = serializer.validated_data['token']
         expiration = timezone.now() - timedelta(hours=settings.EMAIL_VERIFICATION_TOKEN_EXPIRATION)
 
-        email_token = EmailVerificationToken.objects.filter(token=token, is_used=False).first()
-        if not email_token or email_token.created_at < expiration:
+        email_token = EmailVerificationToken.objects.select_related("user").filter(token=token).first()
+        if not email_token:
+            raise ValidationError('Invalid or expired verification token.')
+
+        if email_token.is_used:
+            if email_token.user.email_verified:
+                return Response(
+                    {
+                        'detail': 'Email verified successfully. You can now sign in.',
+                        'user': UserSerializer(email_token.user).data,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            raise ValidationError('Invalid or expired verification token.')
+
+        if email_token.created_at < expiration:
             raise ValidationError('Invalid or expired verification token.')
 
         user = email_token.user
@@ -184,7 +250,10 @@ class ChangePasswordView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        serializer = ChangePasswordSerializer(data=request.data)
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={"user": request.user},
+        )
         serializer.is_valid(raise_exception=True)
         user = request.user
 

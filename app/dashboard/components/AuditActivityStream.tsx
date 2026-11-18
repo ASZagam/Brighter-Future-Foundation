@@ -46,7 +46,7 @@ export default function AuditActivityStream({ logs }: { logs: ActivityLog[] }) {
           <span className="db-audit-dot" />
           <h2>Audit Activity Stream</h2>
         </div>
-        <p className="db-audit-subtitle">Immutable event ledger from /api/core/activity-logs/</p>
+        <p className="db-audit-subtitle">Recent account and platform activity</p>
       </div>
       <div className="db-audit-timeline">
         {logs.length === 0 ? (

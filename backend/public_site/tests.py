@@ -48,11 +48,35 @@ class PublicApiTestCase(TestCase):
         from core.models import OrganizationProfile
 
         OrganizationProfile.objects.create(
-            name="Bright Futures", mission="Serve communities", is_active=True
+            name="Bright Futures",
+            mission="Serve communities",
+            about_disciplines=[
+                {
+                    "id": "public",
+                    "name": "Public discipline",
+                    "description": "Visible on the site.",
+                    "display_order": 1,
+                    "is_published": True,
+                },
+                {
+                    "id": "draft",
+                    "name": "Draft discipline",
+                    "description": "Not yet approved.",
+                    "display_order": 0,
+                    "is_published": False,
+                },
+            ],
+            about_draft={"mission": "Private unpublished mission"},
+            is_active=True,
         )
         response = self.client.get("/api/v2/public/organization/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["name"], "Bright Futures")
+        self.assertEqual(
+            [item["name"] for item in response.data["about_disciplines"]],
+            ["Public discipline"],
+        )
+        self.assertNotIn("about_draft", response.data)
 
     # ------------------------------------------------------------- programs
 

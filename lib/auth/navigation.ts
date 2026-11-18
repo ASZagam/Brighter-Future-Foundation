@@ -89,24 +89,26 @@ const STAFF: Role[] = [Roles.ADMIN, Roles.COORDINATOR];
 const ADMIN_ONLY: Role[] = [Roles.ADMIN];
 
 /** Navigation model for the operations console. */
-export const NAV_SECTIONS: NavSection[] = [
+const NAV_SECTIONS: NavSection[] = [
   {
-    title: 'My Space',
+    title: 'Overview',
     items: [
-      { href: '/volunteer', label: 'Volunteer Hub', icon: 'heart-handshake', roles: [Roles.VOLUNTEER] },
-      { href: '/member', label: 'My Membership', icon: 'user-check', roles: [Roles.MEMBER] },
-      { href: '/donor', label: 'My Giving', icon: 'banknote', roles: [Roles.DONOR] },
+      { href: '/admin', label: 'Dashboard', icon: 'grid', roles: STAFF, exact: true },
     ],
   },
   {
-    title: 'Core Ops',
+    title: 'Programs',
     items: [
-      { href: '/admin', label: 'Console Home', icon: 'grid', roles: STAFF, exact: true },
-      { href: '/admin/dashboard', label: 'Operations Dashboard', icon: 'gauge', roles: STAFF },
       { href: '/admin/programs', label: 'Programs', icon: 'layers', roles: STAFF },
+      { href: '/my-programs', label: 'My Programs', icon: 'layers', roles: STAFF },
       { href: '/admin/beneficiaries', label: 'Beneficiaries', icon: 'users', roles: STAFF },
-      { href: '/admin/volunteers', label: 'Volunteers', icon: 'heart-handshake', roles: STAFF },
+    ],
+  },
+  {
+    title: 'People',
+    items: [
       { href: '/admin/members', label: 'Members', icon: 'user-check', roles: STAFF },
+      { href: '/admin/volunteers', label: 'Volunteers', icon: 'heart-handshake', roles: STAFF },
     ],
   },
   {
@@ -115,14 +117,16 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/donations', label: 'Donations & Grants', icon: 'banknote', roles: STAFF },
       { href: '/admin/events', label: 'Events & Field Trips', icon: 'calendar', roles: STAFF },
       { href: '/admin/news', label: 'News & Media', icon: 'newspaper', roles: STAFF },
-      { href: '/file-uploads', label: 'File Vault', icon: 'folder-lock' },
+      { href: '/admin/broadcasts', label: 'Broadcasts', icon: 'send', roles: ADMIN_ONLY },
       { href: '/notifications', label: 'Notifications', icon: 'bell' },
     ],
   },
   {
-    title: 'System & Admin',
+    title: 'Administration',
     items: [
+      { href: '/file-uploads', label: 'File Vault', icon: 'folder-lock', roles: STAFF },
       { href: '/admin/core', label: 'Foundation & Admin', icon: 'shield', roles: ADMIN_ONLY },
+      { href: '/admin/about', label: 'Organization Profile', icon: 'newspaper', roles: ADMIN_ONLY },
       { href: '/admin/references', label: 'Reference Tables', icon: 'table-2', roles: ADMIN_ONLY },
       { href: '/admin/settings', label: 'Settings', icon: 'settings', roles: ADMIN_ONLY },
       { href: '/admin/audit', label: 'Audit Activity Logs', icon: 'scroll-text', roles: ADMIN_ONLY },
@@ -133,7 +137,24 @@ export const NAV_SECTIONS: NavSection[] = [
 /** Filter the nav down to the sections/items the user may see. */
 export function navigationFor(user: CurrentUser | null | undefined): NavSection[] {
   if (!user) return [];
-  return NAV_SECTIONS.map((section) => ({
+  const isStaff = hasRole(user, Roles.ADMIN, Roles.COORDINATOR, Roles.SUPER_ADMIN);
+  const personalItems: NavItem[] = [
+    { href: '/member', label: 'Dashboard', icon: 'grid', roles: [Roles.MEMBER], exact: true },
+    { href: '/my-programs', label: 'My Programs', icon: 'layers' },
+    { href: '/volunteer', label: 'Volunteer Hub', icon: 'heart-handshake', roles: [Roles.VOLUNTEER] },
+    { href: '/member/profile', label: 'My Profile', icon: 'user-check', roles: [Roles.MEMBER] },
+    { href: '/donor', label: 'My Giving', icon: 'banknote', roles: [Roles.DONOR] },
+  ].filter((item) => !item.roles || hasRole(user, ...item.roles));
+
+  const sections: NavSection[] = [
+    ...(isStaff ? [] : [{
+      title: 'My Space',
+      items: personalItems,
+    }]),
+    ...NAV_SECTIONS,
+  ];
+
+  return sections.map((section) => ({
     ...section,
     items: section.items.filter((item) => {
       if (item.roles && !hasRole(user, ...item.roles)) return false;

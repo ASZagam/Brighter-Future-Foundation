@@ -297,9 +297,8 @@ export default function EventsPage() {
         </section>
 
         <div className="ops-status-strip">
-          <span className="go">● Calendar live</span>
-          <span>GET <b>/api/core/events/</b> · totals from <b>/events/stats/</b></span>
-          <span className="nl">Live via REST</span>
+          <span className="go">{count} events</span>
+          <span>Page {page} of {totalPages}</span>
         </div>
       </main>
 

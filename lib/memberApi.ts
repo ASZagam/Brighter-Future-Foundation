@@ -21,6 +21,9 @@ export type BackendMember = {
   status: string;
   notes: string;
   profile_photo: string | null;
+  registration_source: 'self_service' | 'admin';
+  created_by: string | null;
+  created_by_name: string | null;
   joined_at: string;
   created_at: string;
   updated_at: string;
@@ -36,6 +39,8 @@ export type MemberStats = {
     archived?: number;
     beneficiaries?: number;
     states_covered?: number;
+    self_registered?: number;
+    admin_added?: number;
   };
   tabs?: Record<MemberTabKey, number>;
   options?: {
@@ -51,6 +56,7 @@ export type MemberListParams = {
   state?: string;
   membershipType?: string;
   status?: string;
+  registrationSource?: string;
   ordering?: string;
 };
 
@@ -61,6 +67,7 @@ export function buildMemberQuery(params: MemberListParams = {}): string {
   if (params.state) query.set('state', params.state);
   if (params.membershipType) query.set('membership_type', params.membershipType);
   if (params.status) query.set('status', params.status);
+  if (params.registrationSource) query.set('registration_source', params.registrationSource);
   query.set('ordering', params.ordering ?? '-created_at');
   const qs = query.toString();
   return qs ? `?${qs}` : '';
