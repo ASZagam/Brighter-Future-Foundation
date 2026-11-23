@@ -182,6 +182,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.ScopedRateThrottle",
     ],
 
+    "NUM_PROXIES": int(os.getenv("NUM_PROXIES")) if os.getenv("NUM_PROXIES") else None,
+
     "DEFAULT_THROTTLE_RATES": {
         "newsletter": os.getenv("NEWSLETTER_THROTTLE_RATE", "10/hour"),
         "donation": os.getenv("DONATION_THROTTLE_RATE", "5/hour"),

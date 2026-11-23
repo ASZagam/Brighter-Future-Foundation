@@ -3,6 +3,7 @@ Comprehensive unit tests for authentication and authorization
 """
 from django.test import TestCase, Client
 from django.conf import settings
+from django.core.cache import cache
 from django.core import mail
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -11,7 +12,11 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.test import override_settings
 from rest_framework.test import APIRequestFactory
+from rest_framework.request import Request
+from rest_framework.parsers import JSONParser
 from .email_service import EmailService
+from .throttling import LoginRateThrottle
+from .views import AuthLoginView
 from core.models import Member
 
 from .models import Role, UserRole, EmailVerificationToken, PasswordResetToken, AuditLog, Roles
@@ -230,6 +235,7 @@ class JWTAuthenticationAPITestCase(APITestCase):
 
     def setUp(self):
         """Set up test data"""
+        cache.clear()
         self.client = APIClient()
         self.login_url = reverse('token_obtain_pair')
         self.user_data = {
@@ -521,3 +527,80 @@ class AuditLogTestCase(TestCase):
 
         logs = AuditLog.objects.filter(user=self.user)
         self.assertEqual(logs.count(), 2)
+
+
+class LoginThrottleIsolationTestCase(APITestCase):
+    """One account's failed logins must not throttle another account."""
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient(REMOTE_ADDR='127.0.0.1')
+        self.login_url = reverse('token_obtain_pair')
+        self.admin = User.objects.create_user(
+            username='lockedadmin',
+            email='admin@example.com',
+            password='TestPass123!@#',
+            email_verified=True,
+            status='active',
+        )
+        self.member = User.objects.create_user(
+            username='normalmember',
+            email='member@example.com',
+            password='TestPass123!@#',
+            email_verified=True,
+            status='active',
+        )
+
+    def _login(self, username, password):
+        return self.client.post(
+            self.login_url,
+            {'username': username, 'password': password},
+            format='json',
+        )
+
+    def test_locked_admin_cannot_block_member_login(self):
+        for _ in range(10):
+            response = self._login('lockedadmin', 'WrongPassword')
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.is_locked)
+
+        throttled = self._login('lockedadmin', 'TestPass123!@#')
+        self.assertEqual(throttled.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+        member_response = self._login('normalmember', 'TestPass123!@#')
+        self.assertEqual(member_response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', member_response.data)
+
+    def test_throttle_cache_keys_are_scoped_per_account(self):
+        factory = APIRequestFactory()
+        view = AuthLoginView()
+        throttle = LoginRateThrottle()
+        throttle.scope = 'login'
+
+        def key_for(payload):
+            raw = factory.post('/api/auth/login/', payload, format='json', REMOTE_ADDR='127.0.0.1')
+            request = Request(raw, parsers=[JSONParser()])
+            return throttle.get_cache_key(request, view)
+
+        admin_key = key_for({'username': 'lockedadmin'})
+        member_key = key_for({'username': 'normalmember'})
+        admin_email_key = key_for({'email': 'admin@example.com'})
+
+        self.assertNotEqual(admin_key, member_key)
+        self.assertEqual(admin_key, admin_email_key)
+
+    def test_successful_login_clears_account_bucket(self):
+        for _ in range(9):
+            response = self._login('normalmember', 'WrongPassword')
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        self.member.locked_until = None
+        self.member.save(update_fields=['locked_until'])
+
+        success = self._login('normalmember', 'TestPass123!@#')
+        self.assertEqual(success.status_code, status.HTTP_200_OK)
+
+        again = self._login('normalmember', 'TestPass123!@#')
+        self.assertEqual(again.status_code, status.HTTP_200_OK)

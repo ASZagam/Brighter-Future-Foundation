@@ -23,6 +23,7 @@ from .serializers import (
     password_validation_errors,
 )
 from .services import AuditService
+from .throttling import LoginRateThrottle
 
 from django.contrib.auth import authenticate
 from rest_framework import serializers
@@ -104,6 +105,13 @@ class CustomTokenObtainPairSerializer(serializers.Serializer):
 class AuthLoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
     throttle_scope = "login"
+    throttle_classes = [LoginRateThrottle]
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == status.HTTP_200_OK:
+            LoginRateThrottle.clear(request, self)
+        return response
 
 
 class RegisterView(APIView):
