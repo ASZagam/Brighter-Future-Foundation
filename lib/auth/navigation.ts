@@ -130,6 +130,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: '/admin/references', label: 'Reference Tables', icon: 'table-2', roles: ADMIN_ONLY },
       { href: '/admin/settings', label: 'Settings', icon: 'settings', roles: ADMIN_ONLY },
       { href: '/admin/audit', label: 'Audit Activity Logs', icon: 'scroll-text', roles: ADMIN_ONLY },
+      { href: '/admin/docs', label: 'User Guide', icon: 'book-open', roles: STAFF },
     ],
   },
 ];

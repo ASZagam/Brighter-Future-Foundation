@@ -48,6 +48,7 @@ const LINK_DESCRIPTIONS: Record<string, string> = {
   '/admin/references': 'Maintain shared reference data.',
   '/admin/settings': 'Configure platform preferences.',
   '/admin/audit': 'Review administrative activity history.',
+  '/admin/docs': 'Step-by-step guides for every console tool.',
 };
 
 export default function AdminOverviewPage() {
